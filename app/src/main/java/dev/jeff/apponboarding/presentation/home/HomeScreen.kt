@@ -16,6 +16,7 @@ import dev.jeff.apponboarding.data.model.UsuarioModel
 fun HomeScreen(
     usuario: UsuarioModel?,
     onNavigateToActividades: () -> Unit,
+    onNavigateToRecursos: () -> Unit,
     onLogout: () -> Unit
 ) {
     Scaffold(
@@ -107,12 +108,22 @@ fun HomeScreen(
                 }
             }
 
-            // Botón para acceder a actividades
+            // Botones de navegación
             Button(
                 onClick = onNavigateToActividades,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Ver Mis Actividades")
+            }
+
+            Button(
+                onClick = onNavigateToRecursos,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary
+                )
+            ) {
+                Text("Ver Recursos")
             }
 
             Spacer(Modifier.weight(1f))

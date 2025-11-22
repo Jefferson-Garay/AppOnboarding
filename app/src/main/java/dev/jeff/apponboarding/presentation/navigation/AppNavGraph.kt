@@ -6,12 +6,14 @@ import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import dev.jeff.apponboarding.data.model.UsuarioModel
 import dev.jeff.apponboarding.data.repository.ActividadRepository
+import dev.jeff.apponboarding.data.repository.RecursoRepository
 import dev.jeff.apponboarding.data.repository.UsuarioRepository
 import dev.jeff.apponboarding.presentation.actividad.*
 import dev.jeff.apponboarding.presentation.auth.LoginScreen
 import dev.jeff.apponboarding.presentation.auth.LoginState
 import dev.jeff.apponboarding.presentation.auth.LoginViewModel
 import dev.jeff.apponboarding.presentation.home.HomeScreen
+import dev.jeff.apponboarding.presentation.recurso.*
 
 @Composable
 fun AppNavGraph() {
@@ -20,6 +22,7 @@ fun AppNavGraph() {
     // ViewModels
     val loginViewModel = remember { LoginViewModel(UsuarioRepository()) }
     val actividadViewModel = remember { ActividadViewModel(ActividadRepository()) }
+    val recursoViewModel = remember { RecursoViewModel(RecursoRepository()) }
 
     // Estado del usuario actual
     var currentUser by remember { mutableStateOf<UsuarioModel?>(null) }
@@ -54,6 +57,9 @@ fun AppNavGraph() {
                 onNavigateToActividades = {
                     navController.navigate("actividades")
                 },
+                onNavigateToRecursos = {
+                    navController.navigate("recursos")
+                },
                 onLogout = {
                     currentUser = null
                     navController.navigate("login") {
@@ -62,6 +68,8 @@ fun AppNavGraph() {
                 }
             )
         }
+
+        // === RUTAS DE ACTIVIDADES ===
 
         // Pantalla de lista de actividades
         composable("actividades") {
@@ -100,7 +108,46 @@ fun AppNavGraph() {
                     navController.popBackStack()
                 },
                 onNavigateToEdit = { id ->
-                    // Por implementar: navegar a editar
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // === RUTAS DE RECURSOS ===
+
+        // Pantalla de lista de recursos
+        composable("recursos") {
+            RecursosListScreen(
+                viewModel = recursoViewModel,
+                onNavigateToCreate = {
+                    navController.navigate("recursos/create")
+                },
+                onNavigateToDetail = { recursoId ->
+                    navController.navigate("recursos/detail/$recursoId")
+                }
+            )
+        }
+
+        // Pantalla de crear recurso
+        composable("recursos/create") {
+            CreateRecursoScreen(
+                viewModel = recursoViewModel,
+                adminRef = currentUser?.id?.toString() ?: "",
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // Pantalla de detalle de recurso
+        composable(
+            route = "recursos/detail/{recursoId}",
+            arguments = listOf(navArgument("recursoId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val recursoId = backStackEntry.arguments?.getString("recursoId") ?: ""
+            RecursoDetailScreen(
+                recursoId = recursoId,
+                onNavigateBack = {
                     navController.popBackStack()
                 }
             )
