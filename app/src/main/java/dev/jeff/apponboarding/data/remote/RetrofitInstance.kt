@@ -2,6 +2,7 @@ package dev.jeff.apponboarding.data.remote
 
 import dev.jeff.apponboarding.data.remote.actividad.ActividadService
 import dev.jeff.apponboarding.data.remote.recurso.RecursoService
+import dev.jeff.apponboarding.data.remote.rol.RolService
 import dev.jeff.apponboarding.data.remote.usuario.UsuarioService
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -27,6 +28,10 @@ object RetrofitInstance {
 
     val recursoApi: RecursoService by lazy {
         retrofit.create(RecursoService::class.java)
+    }
+
+    val rolApi: RolService by lazy {
+        retrofit.create(RolService::class.java)
     }
 
     // Para mantener compatibilidad con código existente

@@ -7,6 +7,7 @@ import androidx.navigation.navArgument
 import dev.jeff.apponboarding.data.model.UsuarioModel
 import dev.jeff.apponboarding.data.repository.ActividadRepository
 import dev.jeff.apponboarding.data.repository.RecursoRepository
+import dev.jeff.apponboarding.data.repository.RolRepository
 import dev.jeff.apponboarding.data.repository.UsuarioRepository
 import dev.jeff.apponboarding.presentation.actividad.*
 import dev.jeff.apponboarding.presentation.auth.LoginScreen
@@ -14,6 +15,7 @@ import dev.jeff.apponboarding.presentation.auth.LoginState
 import dev.jeff.apponboarding.presentation.auth.LoginViewModel
 import dev.jeff.apponboarding.presentation.home.HomeScreen
 import dev.jeff.apponboarding.presentation.recurso.*
+import dev.jeff.apponboarding.presentation.rol.*
 
 @Composable
 fun AppNavGraph() {
@@ -23,6 +25,7 @@ fun AppNavGraph() {
     val loginViewModel = remember { LoginViewModel(UsuarioRepository()) }
     val actividadViewModel = remember { ActividadViewModel(ActividadRepository()) }
     val recursoViewModel = remember { RecursoViewModel(RecursoRepository()) }
+    val rolViewModel = remember { RolViewModel(RolRepository()) }
 
     // Estado del usuario actual
     var currentUser by remember { mutableStateOf<UsuarioModel?>(null) }
@@ -36,7 +39,7 @@ fun AppNavGraph() {
         }
     }
 
-    NavHost(navController = navController, startDestination = "home") {
+    NavHost(navController = navController, startDestination = "login") {
 
         // Pantalla de Login
         composable("login") {
@@ -59,6 +62,9 @@ fun AppNavGraph() {
                 },
                 onNavigateToRecursos = {
                     navController.navigate("recursos")
+                },
+                onNavigateToRoles = {
+                    navController.navigate("roles")
                 },
                 onLogout = {
                     currentUser = null
@@ -152,5 +158,45 @@ fun AppNavGraph() {
                 }
             )
         }
+
+        // === RUTAS DE ROLES ===
+
+        composable("roles") {
+            RolesListScreen(
+                viewModel = rolViewModel,
+                onNavigateToCreate = {
+                    navController.navigate("roles/create")
+                },
+                onNavigateToDetail = { rolId ->
+                    navController.navigate("roles/detail/$rolId")
+                }
+            )
+        }
+
+        composable("roles/create") {
+            CreateRolScreen(
+                viewModel = rolViewModel,
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = "roles/detail/{rolId}",
+            arguments = listOf(navArgument("rolId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val rolId = backStackEntry.arguments?.getString("rolId") ?: ""
+            RolDetailScreen(
+                rolId = rolId,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToEdit = { id ->
+                    navController.popBackStack()
+                }
+            )
+        }
+
     }
 }
