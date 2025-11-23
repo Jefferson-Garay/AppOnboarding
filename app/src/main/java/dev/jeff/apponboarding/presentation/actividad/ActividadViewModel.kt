@@ -1,4 +1,4 @@
-package dev.jeff.apponboarding.presentation.home
+package dev.jeff.apponboarding.presentation.actividad
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class HomeViewModel : ViewModel() {
+class ActividadViewModel : ViewModel() {
 
     private val _actividades = MutableStateFlow<List<Actividad>>(emptyList())
     val actividades = _actividades.asStateFlow()
@@ -72,10 +72,10 @@ class HomeViewModel : ViewModel() {
             try {
                 // Encontrar el objeto actualizado para enviarlo a la API.
                 val actividadActualizada = nuevaLista.find { it.id == actividad.id }!!
-                
+
                 // Llamar al endpoint de Retrofit.
                 ApiClient.instance.updateActividad(actividad.id, actividadActualizada)
-                
+
                 // Si llegamos aquí, todo ha ido bien.
                 println("Actividad ${actividad.id} guardada en el backend.")
 

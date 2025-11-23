@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
@@ -32,12 +31,11 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.jeff.apponboarding.data.model.Recurso
-import dev.jeff.apponboarding.presentation.home.AzulOscuro
-import dev.jeff.apponboarding.presentation.home.FondoGris
+import dev.jeff.apponboarding.ui.theme.AzulOscuro // <-- ¡CORREGIDO!
+import dev.jeff.apponboarding.ui.theme.FondoGris // <-- ¡CORREGIDO!
 
 @Composable
 fun RecursosScreen(viewModel: RecursosViewModel = viewModel()) {
-    // Solución Definitiva (Parte 3): Cargar datos solo cuando la pantalla es visible.
     LaunchedEffect(Unit) {
         viewModel.cargarRecursos()
     }

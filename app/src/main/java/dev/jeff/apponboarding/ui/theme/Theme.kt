@@ -1,6 +1,5 @@
 package dev.jeff.apponboarding.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -9,35 +8,42 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
+// Paleta de colores corporativa de TCS
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = AzulOscuro,
+    secondary = VerdeExito,
+    tertiary = Color.LightGray,
+    background = Color(0xFF1C1B1F), // Un fondo oscuro estándar
+    surface = Color(0xFF1C1B1F),
+    onPrimary = Color.White,
+    onSecondary = Color.Black,
+    onBackground = Color.White,
+    onSurface = Color.White,
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = AzulOscuro, // Color principal de la marca
+    secondary = VerdeExito, // Color secundario para acentos
+    tertiary = Color.Gray,
 
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    // Colores de la UI que coinciden con los diseños
+    background = FondoGris,
+    surface = Color.White,
+    
+    onPrimary = Color.White, // Texto sobre el color primario
+    onSecondary = Color.White, // Texto sobre el color secundario
+    onBackground = AzulOscuro, // Color del texto principal
+    onSurface = AzulOscuro, // Color del texto en superficies
 )
 
 @Composable
 fun AppOnboardingTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Lo desactivamos para forzar siempre los colores corporativos.
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
