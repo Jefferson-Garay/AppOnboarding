@@ -33,6 +33,7 @@ fun HomeScreen(
     onNavigateToActividades: () -> Unit,
     onNavigateToRecursos: () -> Unit,
     onNavigateToRoles: () -> Unit,
+    onNavigateToChat: () -> Unit,
     onLogout: () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -43,6 +44,7 @@ fun HomeScreen(
     // Items del menú
     val menuItems = listOf(
         DrawerMenuItem("inicio", "Inicio", Icons.Outlined.Home, Icons.Filled.Home),
+        DrawerMenuItem("chat", "Asistente Virtual", Icons.Outlined.Chat, Icons.Filled.Chat),
         DrawerMenuItem("actividades", "Mis Actividades", Icons.Outlined.Assignment, Icons.Filled.Assignment),
         DrawerMenuItem("recursos", "Recursos", Icons.Outlined.Folder, Icons.Filled.Folder),
         DrawerMenuItem("roles", "Gestionar Roles", Icons.Outlined.Security, Icons.Filled.Security),
@@ -77,6 +79,7 @@ fun HomeScreen(
                             scope.launch { drawerState.close() }
 
                             when (item.id) {
+                                "chat" -> onNavigateToChat()
                                 "actividades" -> onNavigateToActividades()
                                 "recursos" -> onNavigateToRecursos()
                                 "roles" -> onNavigateToRoles()
@@ -307,6 +310,12 @@ fun HomeScreen(
                 ) {
                     QuickAccessCard(
                         modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Chat,
+                        title = "Asistente",
+                        onClick = onNavigateToChat
+                    )
+                    QuickAccessCard(
+                        modifier = Modifier.weight(1f),
                         icon = Icons.Default.Assignment,
                         title = "Actividades",
                         onClick = onNavigateToActividades
@@ -316,12 +325,6 @@ fun HomeScreen(
                         icon = Icons.Default.Folder,
                         title = "Recursos",
                         onClick = onNavigateToRecursos
-                    )
-                    QuickAccessCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.Security,
-                        title = "Roles",
-                        onClick = onNavigateToRoles
                     )
                 }
 

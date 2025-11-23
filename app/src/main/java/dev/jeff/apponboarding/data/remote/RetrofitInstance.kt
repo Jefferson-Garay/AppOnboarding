@@ -1,6 +1,8 @@
 package dev.jeff.apponboarding.data.remote
 
 import dev.jeff.apponboarding.data.remote.actividad.ActividadService
+import dev.jeff.apponboarding.data.remote.chat.InteraccionChatService
+import dev.jeff.apponboarding.data.remote.chat.SalaChatService
 import dev.jeff.apponboarding.data.remote.recurso.RecursoService
 import dev.jeff.apponboarding.data.remote.rol.RolService
 import dev.jeff.apponboarding.data.remote.usuario.UsuarioService
@@ -32,6 +34,14 @@ object RetrofitInstance {
 
     val rolApi: RolService by lazy {
         retrofit.create(RolService::class.java)
+    }
+
+    val salaChatApi: SalaChatService by lazy {
+        retrofit.create(SalaChatService::class.java)
+    }
+
+    val interaccionChatApi: InteraccionChatService by lazy {
+        retrofit.create(InteraccionChatService::class.java)
     }
 
     // Para mantener compatibilidad con código existente

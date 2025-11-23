@@ -6,6 +6,7 @@ import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import dev.jeff.apponboarding.data.model.UsuarioModel
 import dev.jeff.apponboarding.data.repository.ActividadRepository
+import dev.jeff.apponboarding.data.repository.ChatRepository
 import dev.jeff.apponboarding.data.repository.RecursoRepository
 import dev.jeff.apponboarding.data.repository.RolRepository
 import dev.jeff.apponboarding.data.repository.UsuarioRepository
@@ -13,6 +14,7 @@ import dev.jeff.apponboarding.presentation.actividad.*
 import dev.jeff.apponboarding.presentation.auth.LoginScreen
 import dev.jeff.apponboarding.presentation.auth.LoginState
 import dev.jeff.apponboarding.presentation.auth.LoginViewModel
+import dev.jeff.apponboarding.presentation.chat.*
 import dev.jeff.apponboarding.presentation.home.HomeScreen
 import dev.jeff.apponboarding.presentation.recurso.*
 import dev.jeff.apponboarding.presentation.rol.*
@@ -26,6 +28,7 @@ fun AppNavGraph() {
     val actividadViewModel = remember { ActividadViewModel(ActividadRepository()) }
     val recursoViewModel = remember { RecursoViewModel(RecursoRepository()) }
     val rolViewModel = remember { RolViewModel(RolRepository()) }
+    val chatViewModel = remember { ChatViewModel(ChatRepository()) }
 
     // Estado del usuario actual
     var currentUser by remember { mutableStateOf<UsuarioModel?>(null) }
@@ -66,6 +69,9 @@ fun AppNavGraph() {
                 onNavigateToRoles = {
                     navController.navigate("roles")
                 },
+                onNavigateToChat = {
+                    navController.navigate("chat")
+                },
                 onLogout = {
                     currentUser = null
                     navController.navigate("login") {
@@ -75,9 +81,20 @@ fun AppNavGraph() {
             )
         }
 
+        // === RUTA DE CHAT ===
+
+        composable("chat") {
+            ChatScreen(
+                viewModel = chatViewModel,
+                usuario = currentUser,
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
         // === RUTAS DE ACTIVIDADES ===
 
-        // Pantalla de lista de actividades
         composable("actividades") {
             ActividadesListScreen(
                 viewModel = actividadViewModel,
@@ -91,7 +108,6 @@ fun AppNavGraph() {
             )
         }
 
-        // Pantalla de crear actividad
         composable("actividades/create") {
             CreateActividadScreen(
                 viewModel = actividadViewModel,
@@ -102,7 +118,6 @@ fun AppNavGraph() {
             )
         }
 
-        // Pantalla de detalle de actividad
         composable(
             route = "actividades/detail/{actividadId}",
             arguments = listOf(navArgument("actividadId") { type = NavType.StringType })
@@ -121,7 +136,6 @@ fun AppNavGraph() {
 
         // === RUTAS DE RECURSOS ===
 
-        // Pantalla de lista de recursos
         composable("recursos") {
             RecursosListScreen(
                 viewModel = recursoViewModel,
@@ -134,7 +148,6 @@ fun AppNavGraph() {
             )
         }
 
-        // Pantalla de crear recurso
         composable("recursos/create") {
             CreateRecursoScreen(
                 viewModel = recursoViewModel,
@@ -145,7 +158,6 @@ fun AppNavGraph() {
             )
         }
 
-        // Pantalla de detalle de recurso
         composable(
             route = "recursos/detail/{recursoId}",
             arguments = listOf(navArgument("recursoId") { type = NavType.StringType })
@@ -197,6 +209,5 @@ fun AppNavGraph() {
                 }
             )
         }
-
     }
 }
