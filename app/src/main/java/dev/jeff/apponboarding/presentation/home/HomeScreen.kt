@@ -1,6 +1,5 @@
 package dev.jeff.apponboarding.presentation.home
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -17,6 +16,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.jeff.apponboarding.data.model.UsuarioModel
+import dev.jeff.apponboarding.presentation.actividad.ActividadViewModel
+import dev.jeff.apponboarding.presentation.actividad.ActividadesState
+import dev.jeff.apponboarding.presentation.notificaciones.NotificacionesDrawer
 import kotlinx.coroutines.launch
 
 data class DrawerMenuItem(
@@ -30,16 +32,30 @@ data class DrawerMenuItem(
 @Composable
 fun HomeScreen(
     usuario: UsuarioModel?,
+    actividadViewModel: ActividadViewModel,
     onNavigateToActividades: () -> Unit,
     onNavigateToRecursos: () -> Unit,
     onNavigateToRoles: () -> Unit,
     onNavigateToChat: () -> Unit,
+    onNavigateToActividadDetail: (String) -> Unit,
     onLogout: () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val notificacionesDrawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var selectedItem by remember { mutableStateOf("inicio") }
     var isDarkTheme by remember { mutableStateOf(false) }
+
+    // Estados de actividades
+    val pendientesCount by actividadViewModel.pendientesCount.collectAsState()
+    val actividadesState by actividadViewModel.actividadesState.collectAsState()
+
+    // Cargar contador al iniciar
+    LaunchedEffect(usuario) {
+        usuario?.let {
+            actividadViewModel.loadPendientesCount(it.id?.toString() ?: "")
+        }
+    }
 
     // Items del menú
     val menuItems = listOf(
@@ -53,328 +69,424 @@ fun HomeScreen(
         DrawerMenuItem("configuracion", "Configuración", Icons.Outlined.Settings, Icons.Filled.Settings)
     )
 
+    // Drawer de notificaciones (externo)
     ModalNavigationDrawer(
-        drawerState = drawerState,
+        drawerState = notificacionesDrawerState,
         drawerContent = {
-            ModalDrawerSheet(
-                drawerContainerColor = Color(0xFF1A237E) // Azul oscuro
-            ) {
-                // Header del Drawer
-                DrawerHeader(
-                    usuario = usuario,
-                    onCloseDrawer = {
-                        scope.launch { drawerState.close() }
+            val actividades = when (val state = actividadesState) {
+                is ActividadesState.Success -> state.actividades
+                else -> emptyList()
+            }
+
+            NotificacionesDrawer(
+                actividades = actividades,
+                isLoading = actividadesState is ActividadesState.Loading,
+                onActividadClick = { actividad ->
+                    scope.launch {
+                        notificacionesDrawerState.close()
+                        onNavigateToActividadDetail(actividad.id ?: "")
                     }
-                )
-
-                Spacer(Modifier.height(8.dp))
-
-                // Items del menú
-                menuItems.forEach { item ->
-                    DrawerItem(
-                        item = item,
-                        isSelected = selectedItem == item.id,
-                        onClick = {
-                            selectedItem = item.id
+                },
+                onMarcarCompletada = { actividad ->
+                    usuario?.let {
+                        actividadViewModel.cambiarEstadoActividad(
+                            actividadId = actividad.id ?: "",
+                            actividad = actividad,
+                            nuevoEstado = "completada",
+                            usuarioRef = it.id?.toString() ?: ""
+                        )
+                    }
+                },
+                onClose = {
+                    scope.launch { notificacionesDrawerState.close() }
+                }
+            )
+        },
+        gesturesEnabled = notificacionesDrawerState.isOpen
+    ) {
+        // Drawer principal del menú (interno)
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                ModalDrawerSheet(
+                    drawerContainerColor = Color(0xFF1A237E)
+                ) {
+                    // Header del Drawer
+                    DrawerHeader(
+                        usuario = usuario,
+                        onCloseDrawer = {
                             scope.launch { drawerState.close() }
-
-                            when (item.id) {
-                                "chat" -> onNavigateToChat()
-                                "actividades" -> onNavigateToActividades()
-                                "recursos" -> onNavigateToRecursos()
-                                "roles" -> onNavigateToRoles()
-                            }
                         }
                     )
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Items del menú
+                    menuItems.forEach { item ->
+                        DrawerItem(
+                            item = item,
+                            isSelected = selectedItem == item.id,
+                            onClick = {
+                                selectedItem = item.id
+                                scope.launch { drawerState.close() }
+
+                                when (item.id) {
+                                    "chat" -> onNavigateToChat()
+                                    "actividades" -> onNavigateToActividades()
+                                    "recursos" -> onNavigateToRecursos()
+                                    "roles" -> onNavigateToRoles()
+                                }
+                            }
+                        )
+                    }
+
+                    Spacer(Modifier.weight(1f))
+
+                    // Botón de cerrar sesión
+                    DrawerItem(
+                        item = DrawerMenuItem("logout", "Cerrar Sesión", Icons.Outlined.ExitToApp),
+                        isSelected = false,
+                        onClick = onLogout,
+                        isLogout = true
+                    )
+
+                    Spacer(Modifier.height(16.dp))
                 }
-
-                Spacer(Modifier.weight(1f))
-
-                // Botón de cerrar sesión al final
-                DrawerItem(
-                    item = DrawerMenuItem("logout", "Cerrar Sesión", Icons.Outlined.ExitToApp),
-                    isSelected = false,
-                    onClick = onLogout,
-                    isLogout = true
-                )
-
-                Spacer(Modifier.height(16.dp))
             }
-        }
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            // Logo placeholder
-                            Surface(
-                                modifier = Modifier.size(32.dp),
-                                shape = MaterialTheme.shapes.small,
-                                color = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Box(
-                                    contentAlignment = Alignment.Center
+                                Surface(
+                                    modifier = Modifier.size(32.dp),
+                                    shape = MaterialTheme.shapes.small,
+                                    color = MaterialTheme.colorScheme.primaryContainer
                                 ) {
-                                    Icon(
-                                        Icons.Default.Business,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp)
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.Business,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "TCS",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        },
+                        navigationIcon = {
+                            IconButton(
+                                onClick = {
+                                    scope.launch { drawerState.open() }
+                                }
+                            ) {
+                                Icon(Icons.Default.Menu, contentDescription = "Menú")
+                            }
+                        },
+                        actions = {
+                            // Avatar del usuario
+                            Surface(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape),
+                                color = MaterialTheme.colorScheme.primary
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = usuario?.nombre?.take(2)?.uppercase() ?: "US",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onPrimary
                                     )
                                 }
                             }
-                            Text(
-                                text = "TCS",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(
-                            onClick = {
-                                scope.launch { drawerState.open() }
-                            }
-                        ) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menú")
-                        }
-                    },
-                    actions = {
-                        // Avatar del usuario
-                        Surface(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape),
-                            color = MaterialTheme.colorScheme.primary
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = usuario?.nombre?.take(2)?.uppercase() ?: "US",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                            }
-                        }
 
-                        Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(8.dp))
 
-                        // Notificaciones
-                        IconButton(onClick = { /* TODO: Notificaciones */ }) {
-                            BadgedBox(
-                                badge = {
-                                    Badge {
-                                        Text("7")
+                            // Notificaciones con contador
+                            IconButton(
+                                onClick = {
+                                    usuario?.let {
+                                        actividadViewModel.loadActividadesPendientes(it.id?.toString() ?: "")
+                                    }
+                                    scope.launch {
+                                        notificacionesDrawerState.open()
                                     }
                                 }
                             ) {
-                                Icon(Icons.Default.Notifications, contentDescription = "Notificaciones")
+                                BadgedBox(
+                                    badge = {
+                                        if (pendientesCount > 0) {
+                                            Badge {
+                                                Text(pendientesCount.toString())
+                                            }
+                                        }
+                                    }
+                                ) {
+                                    Icon(Icons.Default.Notifications, contentDescription = "Notificaciones")
+                                }
                             }
-                        }
 
-                        // Cambiar tema claro/oscuro
-                        IconButton(
-                            onClick = { isDarkTheme = !isDarkTheme }
-                        ) {
-                            Icon(
-                                if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                                contentDescription = "Cambiar tema"
-                            )
-                        }
-
-                        // Cerrar sesión
-                        IconButton(onClick = onLogout) {
-                            Icon(Icons.Default.ExitToApp, contentDescription = "Cerrar sesión")
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                )
-            }
-        ) { padding ->
-            // Contenido principal del Home
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Card de bienvenida
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape),
-                            color = MaterialTheme.colorScheme.primary
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center
+                            // Cambiar tema
+                            IconButton(
+                                onClick = { isDarkTheme = !isDarkTheme }
                             ) {
-                                Text(
-                                    text = usuario?.nombre?.take(2)?.uppercase() ?: "US",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.onPrimary
+                                Icon(
+                                    if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                    contentDescription = "Cambiar tema"
                                 )
                             }
-                        }
-                        Spacer(Modifier.width(16.dp))
-                        Column {
-                            Text(
-                                text = "Bienvenido/a",
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                            Text(
-                                text = usuario?.nombre ?: "Usuario",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            if (usuario?.area != null) {
-                                Text(
-                                    text = usuario.area,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
 
-                // Card de progreso de Onboarding
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                            // Cerrar sesión
+                            IconButton(onClick = onLogout) {
+                                Icon(Icons.Default.ExitToApp, contentDescription = "Cerrar sesión")
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
                     )
+                }
+            ) { padding ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+                    // Card de bienvenida
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Progreso de Onboarding",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "${usuario?.nivelOnboarding?.porcentaje ?: 0}%",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = "Etapa: ${usuario?.nivelOnboarding?.etapa ?: "N/A"}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        LinearProgressIndicator(
-                            progress = (usuario?.nivelOnboarding?.porcentaje ?: 0) / 100f,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(8.dp),
-                            trackColor = MaterialTheme.colorScheme.surface
-                        )
-                    }
-                }
-
-                // Accesos rápidos
-                Text(
-                    text = "Accesos Rápidos",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    QuickAccessCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.Chat,
-                        title = "Asistente",
-                        onClick = onNavigateToChat
-                    )
-                    QuickAccessCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.Assignment,
-                        title = "Actividades",
-                        onClick = onNavigateToActividades
-                    )
-                    QuickAccessCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.Folder,
-                        title = "Recursos",
-                        onClick = onNavigateToRecursos
-                    )
-                }
-
-                Spacer(Modifier.weight(1f))
-
-                // Información de contacto
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Información de contacto",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                Icons.Default.Email,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
+                            Surface(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape),
+                                color = MaterialTheme.colorScheme.primary
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = usuario?.nombre?.take(2)?.uppercase() ?: "US",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = "Bienvenido/a",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                                Text(
+                                    text = usuario?.nombre ?: "Usuario",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                if (usuario?.area != null) {
+                                    Text(
+                                        text = usuario.area,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Card de notificaciones pendientes
+                    if (pendientesCount > 0) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    usuario?.let {
+                                        actividadViewModel.loadActividadesPendientes(it.id?.toString() ?: "")
+                                    }
+                                    scope.launch {
+                                        notificacionesDrawerState.open()
+                                    }
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
                             )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Notifications,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "Tienes $pendientesCount ${if (pendientesCount == 1) "actividad pendiente" else "actividades pendientes"}",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                        Text(
+                                            text = "Toca para ver detalles",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    Icons.Default.ArrowForward,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                        }
+                    }
+
+                    // Card de progreso
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Progreso de Onboarding",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "${usuario?.nivelOnboarding?.porcentaje ?: 0}%",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Spacer(Modifier.height(8.dp))
                             Text(
-                                text = usuario?.correo ?: "N/A",
-                                style = MaterialTheme.typography.bodySmall
+                                text = "Etapa: ${usuario?.nivelOnboarding?.etapa ?: "N/A"}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            LinearProgressIndicator(
+                                progress = (usuario?.nivelOnboarding?.porcentaje ?: 0) / 100f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp),
+                                trackColor = MaterialTheme.colorScheme.surface
                             )
                         }
-                        if (usuario?.telefono != null) {
-                            Spacer(Modifier.height(4.dp))
+                    }
+
+                    // Accesos rápidos
+                    Text(
+                        text = "Accesos Rápidos",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        QuickAccessCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Chat,
+                            title = "Asistente",
+                            onClick = onNavigateToChat
+                        )
+                        QuickAccessCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Assignment,
+                            title = "Actividades",
+                            onClick = onNavigateToActividades
+                        )
+                        QuickAccessCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Folder,
+                            title = "Recursos",
+                            onClick = onNavigateToRecursos
+                        )
+                    }
+
+                    Spacer(Modifier.weight(1f))
+
+                    // Información de contacto
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = "Información de contacto",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(8.dp))
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Icon(
-                                    Icons.Default.Phone,
+                                    Icons.Default.Email,
                                     contentDescription = null,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
-                                    text = usuario.telefono,
+                                    text = usuario?.correo ?: "N/A",
                                     style = MaterialTheme.typography.bodySmall
                                 )
+                            }
+                            if (usuario?.telefono != null) {
+                                Spacer(Modifier.height(4.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Phone,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = usuario.telefono,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
                             }
                         }
                     }
@@ -429,7 +541,7 @@ fun DrawerItem(
     }
 
     val contentColor = when {
-        isLogout -> Color(0xFFEF5350) // Rojo para logout
+        isLogout -> Color(0xFFEF5350)
         else -> Color.White
     }
 

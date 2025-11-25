@@ -60,6 +60,7 @@ fun AppNavGraph() {
         composable("home") {
             HomeScreen(
                 usuario = currentUser,
+                actividadViewModel = actividadViewModel,
                 onNavigateToActividades = {
                     navController.navigate("actividades")
                 },
@@ -71,6 +72,9 @@ fun AppNavGraph() {
                 },
                 onNavigateToChat = {
                     navController.navigate("chat")
+                },
+                onNavigateToActividadDetail = { actividadId ->
+                    navController.navigate("actividades/detail/$actividadId")
                 },
                 onLogout = {
                     currentUser = null

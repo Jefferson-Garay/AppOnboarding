@@ -25,6 +25,10 @@ class ActividadViewModel(
     private val _updateState = MutableStateFlow<UpdateActividadState>(UpdateActividadState.Idle)
     val updateState: StateFlow<UpdateActividadState> = _updateState
 
+    // Estado para el contador de notificaciones
+    private val _pendientesCount = MutableStateFlow(0)
+    val pendientesCount: StateFlow<Int> = _pendientesCount
+
     // Cargar todas las actividades
     fun loadActividades() {
         viewModelScope.launch {
@@ -49,6 +53,16 @@ class ActividadViewModel(
             _actividadesState.value = ActividadesState.Loading
             val actividades = repository.getActividadesPendientes(usuarioRef)
             _actividadesState.value = ActividadesState.Success(actividades)
+            // Actualizar contador
+            _pendientesCount.value = actividades.size
+        }
+    }
+
+    // Cargar SOLO el contador de pendientes (para notificaciones)
+    fun loadPendientesCount(usuarioRef: String) {
+        viewModelScope.launch {
+            val actividades = repository.getActividadesPendientes(usuarioRef)
+            _pendientesCount.value = actividades.size
         }
     }
 
@@ -92,6 +106,37 @@ class ActividadViewModel(
                 _updateState.value = UpdateActividadState.Success(result)
             } else {
                 _updateState.value = UpdateActividadState.Error("Error al actualizar la actividad")
+            }
+        }
+    }
+
+    // Cambiar estado de actividad (para notificaciones)
+    fun cambiarEstadoActividad(
+        actividadId: String,
+        actividad: ActividadModel,
+        nuevoEstado: String,
+        usuarioRef: String
+    ) {
+        viewModelScope.launch {
+            val actividadRequest = ActividadRequest(
+                titulo = actividad.titulo,
+                descripcion = actividad.descripcion,
+                tipo = actividad.tipo,
+                fechaInicio = actividad.fechaInicio,
+                fechaFin = actividad.fechaFin,
+                usuarioRef = actividad.usuarioRef,
+                estado = nuevoEstado
+            )
+
+            val result = repository.updateActividad(actividadId, actividadRequest)
+
+            if (result != null) {
+                // Recargar contador de pendientes
+                loadPendientesCount(usuarioRef)
+                // Recargar lista si está visible
+                if (_actividadesState.value is ActividadesState.Success) {
+                    loadActividadesPendientes(usuarioRef)
+                }
             }
         }
     }
