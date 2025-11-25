@@ -8,7 +8,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-class LoginViewModel(
+class LoginViewModel(   //Maneja toda la lógica de la interfaz del chat:
     private val repository: UsuarioRepository
 ) : ViewModel() {
 

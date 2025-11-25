@@ -10,7 +10,7 @@ class ChatRepository {
     private val salaChatApi = RetrofitInstance.salaChatApi
     private val interaccionChatApi = RetrofitInstance.interaccionChatApi
 
-    // ===== SALA CHAT =====
+    // ===== SALA CHAT ======
 
     // Obtener sala por usuario
     suspend fun getSalaByUsuario(usuarioRef: String): SalaChatModel? {
