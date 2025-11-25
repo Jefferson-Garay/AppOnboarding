@@ -3,6 +3,7 @@ package dev.jeff.apponboarding.presentation.actividad
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -13,6 +14,8 @@ import dev.jeff.apponboarding.data.repository.ActividadRepository
 import kotlinx.coroutines.launch
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import androidx.compose.material3.HorizontalDivider
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,7 +43,8 @@ fun ActividadDetailScreen(
                 title = { Text("Detalle de Actividad") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        //Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 actions = {
@@ -85,7 +89,8 @@ fun ActividadDetailScreen(
                                     style = MaterialTheme.typography.headlineSmall
                                 )
 
-                                Divider()
+                                //Divider()
+                                HorizontalDivider()
 
                                 DetailRow(label = "Descripción", value = actividad!!.descripcion)
 

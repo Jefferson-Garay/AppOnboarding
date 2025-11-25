@@ -38,6 +38,7 @@ fun HomeScreen(
     onNavigateToRoles: () -> Unit,
     onNavigateToChat: () -> Unit,
     onNavigateToSupervisor: () -> Unit,
+    onNavigateToAyuda: () -> Unit,
     onNavigateToActividadDetail: (String) -> Unit,
     onLogout: () -> Unit
 ) {
@@ -138,6 +139,7 @@ fun HomeScreen(
                                     "actividades" -> onNavigateToActividades()
                                     "recursos" -> onNavigateToRecursos()
                                     "roles" -> onNavigateToRoles()
+                                    "ayuda" -> onNavigateToAyuda()
                                 }
                             }
                         )
