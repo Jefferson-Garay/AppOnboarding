@@ -34,6 +34,7 @@ fun HomeScreen(
     onNavigateToRecursos: () -> Unit,
     onNavigateToRoles: () -> Unit,
     onNavigateToChat: () -> Unit,
+    onNavigateToHistory: () -> Unit,
     onLogout: () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -41,17 +42,25 @@ fun HomeScreen(
     var selectedItem by remember { mutableStateOf("inicio") }
     var isDarkTheme by remember { mutableStateOf(false) }
 
+    // Para pruebas: asumimos que todos son admin por ahora
+    val isAdmin = true // usuario?.rolRef != null 
+
     // Items del menú
-    val menuItems = listOf(
+    val menuItems = mutableListOf(
         DrawerMenuItem("inicio", "Inicio", Icons.Outlined.Home, Icons.Filled.Home),
         DrawerMenuItem("chat", "Asistente Virtual", Icons.Outlined.Chat, Icons.Filled.Chat),
         DrawerMenuItem("actividades", "Mis Actividades", Icons.Outlined.Assignment, Icons.Filled.Assignment),
         DrawerMenuItem("recursos", "Recursos", Icons.Outlined.Folder, Icons.Filled.Folder),
-        DrawerMenuItem("roles", "Gestionar Roles", Icons.Outlined.Security, Icons.Filled.Security),
         DrawerMenuItem("perfil", "Mi Información", Icons.Outlined.Person, Icons.Filled.Person),
         DrawerMenuItem("ayuda", "Ayuda", Icons.Outlined.Help, Icons.Filled.Help),
         DrawerMenuItem("configuracion", "Configuración", Icons.Outlined.Settings, Icons.Filled.Settings)
     )
+
+    if (isAdmin) {
+        // Agregar items de admin
+        menuItems.add(4, DrawerMenuItem("roles", "Gestionar Roles", Icons.Outlined.Security, Icons.Filled.Security))
+        menuItems.add(5, DrawerMenuItem("history", "Historial Chat", Icons.Outlined.History, Icons.Filled.History))
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -83,6 +92,7 @@ fun HomeScreen(
                                 "actividades" -> onNavigateToActividades()
                                 "recursos" -> onNavigateToRecursos()
                                 "roles" -> onNavigateToRoles()
+                                "history" -> onNavigateToHistory()
                             }
                         }
                     )
@@ -326,6 +336,22 @@ fun HomeScreen(
                         title = "Recursos",
                         onClick = onNavigateToRecursos
                     )
+                }
+                
+                if (isAdmin) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        QuickAccessCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.History,
+                            title = "Historial Chat",
+                            onClick = onNavigateToHistory
+                        )
+                        // Espacio para más botones admin
+                        Spacer(Modifier.weight(2f))
+                    }
                 }
 
                 Spacer(Modifier.weight(1f))

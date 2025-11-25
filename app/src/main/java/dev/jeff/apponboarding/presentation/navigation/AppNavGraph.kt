@@ -7,6 +7,7 @@ import androidx.navigation.navArgument
 import dev.jeff.apponboarding.data.model.UsuarioModel
 import dev.jeff.apponboarding.data.repository.ActividadRepository
 import dev.jeff.apponboarding.data.repository.ChatRepository
+import dev.jeff.apponboarding.data.repository.HistoryRepository
 import dev.jeff.apponboarding.data.repository.RecursoRepository
 import dev.jeff.apponboarding.data.repository.RolRepository
 import dev.jeff.apponboarding.data.repository.UsuarioRepository
@@ -15,6 +16,8 @@ import dev.jeff.apponboarding.presentation.auth.LoginScreen
 import dev.jeff.apponboarding.presentation.auth.LoginState
 import dev.jeff.apponboarding.presentation.auth.LoginViewModel
 import dev.jeff.apponboarding.presentation.chat.*
+import dev.jeff.apponboarding.presentation.history.HistoryScreen
+import dev.jeff.apponboarding.presentation.history.HistoryViewModel
 import dev.jeff.apponboarding.presentation.home.HomeScreen
 import dev.jeff.apponboarding.presentation.recurso.*
 import dev.jeff.apponboarding.presentation.rol.*
@@ -29,6 +32,7 @@ fun AppNavGraph() {
     val recursoViewModel = remember { RecursoViewModel(RecursoRepository()) }
     val rolViewModel = remember { RolViewModel(RolRepository()) }
     val chatViewModel = remember { ChatViewModel(ChatRepository()) }
+    val historyViewModel = remember { HistoryViewModel(HistoryRepository()) }
 
     // Estado del usuario actual
     var currentUser by remember { mutableStateOf<UsuarioModel?>(null) }
@@ -72,6 +76,9 @@ fun AppNavGraph() {
                 onNavigateToChat = {
                     navController.navigate("chat")
                 },
+                onNavigateToHistory = {
+                    navController.navigate("history")
+                },
                 onLogout = {
                     currentUser = null
                     navController.navigate("login") {
@@ -90,6 +97,19 @@ fun AppNavGraph() {
                 onNavigateBack = {
                     navController.popBackStack()
                 }
+            )
+        }
+
+        // === RUTA DE HISTORIAL DE CHAT ===
+
+        composable("history") {
+            val isAdmin = currentUser?.rolRef != null // Lógica simple, ajustar si es necesario
+            HistoryScreen(
+                viewModel = historyViewModel,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                isAdmin = isAdmin
             )
         }
 
@@ -139,6 +159,7 @@ fun AppNavGraph() {
         composable("recursos") {
             RecursosListScreen(
                 viewModel = recursoViewModel,
+                usuario = currentUser,
                 onNavigateToCreate = {
                     navController.navigate("recursos/create")
                 },

@@ -9,35 +9,44 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
+// Esquema de colores oscuros adaptado a la identidad corporativa
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = CorporateBlueLight, // Azul más claro para resaltar en oscuro
+    onPrimary = Color.White,
+    primaryContainer = CorporateBlue,
+    onPrimaryContainer = Color.White,
+    secondary = CorporateBlue,
+    onSecondary = Color.White,
+    background = Color(0xFF121212), // Fondo oscuro estándar
+    surface = Color(0xFF1E1E1E), // Superficie oscura
+    onBackground = Color.White,
+    onSurface = Color.White
 )
 
+// Esquema de colores claros oficial
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+    primary = CorporateBlue,
     onPrimary = Color.White,
+    primaryContainer = CorporateBlueDark,
+    onPrimaryContainer = Color.White,
+    secondary = CorporateBlueLight,
     onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    background = CorporateGrayLight, // Gris muy claro institucional
+    surface = Color.White,
+    onBackground = CorporateBlack,
+    onSurface = CorporateBlack,
+    surfaceVariant = CorporateGrayLight,
+    onSurfaceVariant = CorporateGrayDark
 )
 
 @Composable
 fun AppOnboardingTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Desactivamos dynamicColor por defecto para forzar identidad corporativa
+    dynamicColor: Boolean = false, 
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -45,7 +54,6 @@ fun AppOnboardingTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }

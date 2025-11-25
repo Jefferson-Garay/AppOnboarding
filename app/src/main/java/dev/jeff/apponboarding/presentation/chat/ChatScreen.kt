@@ -1,7 +1,7 @@
 package dev.jeff.apponboarding.presentation.chat
 
-
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -179,11 +179,32 @@ fun ChatScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        // --- Sección de bienvenida estilizada (si es el primer mensaje) ---
+                        // Verificamos si el primer mensaje es del sistema y lo personalizamos
+                        // O agregamos un header si la lista no está vacía
+                        
+                        if (messages.isEmpty()) {
+                             item {
+                                 WelcomeHeader(onSuggestionClick = { text ->
+                                     messageText = text
+                                 })
+                             }
+                        } else if (messages.size == 1 && !messages[0].isFromUser && messages[0].id.startsWith("welcome")) {
+                             item {
+                                 WelcomeHeader(onSuggestionClick = { text ->
+                                     messageText = text
+                                 })
+                             }
+                        }
+
                         items(messages) { message ->
-                            ChatBubble(
-                                message = message,
-                                userName = usuario?.nombre ?: "Usuario"
-                            )
+                            // No mostrar el mensaje de bienvenida default si ya tenemos el header custom
+                            if (!message.id.startsWith("welcome")) {
+                                ChatBubble(
+                                    message = message,
+                                    userName = usuario?.nombre ?: "Usuario"
+                                )
+                            }
                         }
 
                         // Indicador de escribiendo
@@ -215,6 +236,63 @@ fun ChatScreen(
     }
 }
 
+@Composable
+fun WelcomeHeader(onSuggestionClick: (String) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Surface(
+            modifier = Modifier.size(80.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            tonalElevation = 4.dp
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Default.SmartToy, 
+                    contentDescription = null, 
+                    modifier = Modifier.size(40.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+        
+        Text(
+            "¡Hola! Soy tu asistente de onboarding.",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        
+        Text(
+            "Puedo ayudarte con temas como intranet, políticas, formularios y capacitación.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+        
+        Spacer(Modifier.height(8.dp))
+        
+        // Sugerencias
+        FlowRow(
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth(),
+            maxItemsInEachRow = 2
+        ) {
+            SuggestionChip(onClick = { onSuggestionClick("¿Dónde encuentro las políticas?") }, label = { Text("Políticas") })
+            Spacer(Modifier.width(8.dp))
+            SuggestionChip(onClick = { onSuggestionClick("Necesito un formulario") }, label = { Text("Formularios") })
+            Spacer(Modifier.width(8.dp))
+            SuggestionChip(onClick = { onSuggestionClick("Información sobre capacitación") }, label = { Text("Capacitación") })
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChatBubble(
     message: ChatMessage,
@@ -379,7 +457,7 @@ fun MessageInput(
                 value = value,
                 onValueChange = onValueChange,
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("Escribe tu mensaje...") },
+                placeholder = { Text("ej.: 'políticas', 'formularios'...") },
                 shape = RoundedCornerShape(24.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = Color.Transparent,

@@ -1,6 +1,7 @@
 package dev.jeff.apponboarding.data.remote
 
 import dev.jeff.apponboarding.data.remote.actividad.ActividadService
+import dev.jeff.apponboarding.data.remote.chat.HistoryService
 import dev.jeff.apponboarding.data.remote.chat.InteraccionChatService
 import dev.jeff.apponboarding.data.remote.chat.SalaChatService
 import dev.jeff.apponboarding.data.remote.recurso.RecursoService
@@ -44,13 +45,12 @@ object RetrofitInstance {
         retrofit.create(InteraccionChatService::class.java)
     }
 
+    val historyApi: HistoryService by lazy {
+        retrofit.create(HistoryService::class.java)
+    }
+
     // Para mantener compatibilidad con código existente
     val api: UsuarioService by lazy {
         usuarioApi
     }
-
-
-
-
-
 }
