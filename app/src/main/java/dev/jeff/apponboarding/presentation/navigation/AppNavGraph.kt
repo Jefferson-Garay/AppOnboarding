@@ -14,6 +14,7 @@ import dev.jeff.apponboarding.presentation.actividad.*
 import dev.jeff.apponboarding.presentation.auth.LoginScreen
 import dev.jeff.apponboarding.presentation.auth.LoginState
 import dev.jeff.apponboarding.presentation.auth.LoginViewModel
+import dev.jeff.apponboarding.presentation.ayuda.AyudaScreen
 import dev.jeff.apponboarding.presentation.chat.*
 import dev.jeff.apponboarding.presentation.home.HomeScreen
 import dev.jeff.apponboarding.presentation.recurso.*
@@ -77,6 +78,9 @@ fun AppNavGraph() {
                 onNavigateToSupervisor = {
                     navController.navigate("supervisor")
                 },
+                onNavigateToAyuda = {
+                    navController.navigate("ayuda")
+                },
                 onNavigateToActividadDetail = { actividadId ->
                     navController.navigate("actividades/detail/$actividadId")
                 },
@@ -96,6 +100,28 @@ fun AppNavGraph() {
                 usuarioActual = currentUser,
                 onNavigateBack = {
                     navController.popBackStack()
+                }
+            )
+        }
+
+        // === RUTA DE AYUDA ===
+
+        composable("ayuda") {
+            AyudaScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToSupervisor = {
+                    navController.navigate("supervisor")
+                },
+                onNavigateToActividades = {
+                    navController.navigate("actividades")
+                },
+                onNavigateToRecursos = {
+                    navController.navigate("recursos")
+                },
+                onNavigateToChat = {
+                    navController.navigate("chat")
                 }
             )
         }
