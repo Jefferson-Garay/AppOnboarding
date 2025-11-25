@@ -18,6 +18,7 @@ import dev.jeff.apponboarding.presentation.chat.*
 import dev.jeff.apponboarding.presentation.home.HomeScreen
 import dev.jeff.apponboarding.presentation.recurso.*
 import dev.jeff.apponboarding.presentation.rol.*
+import dev.jeff.apponboarding.presentation.supervisor.MiSupervisorScreen
 
 @Composable
 fun AppNavGraph() {
@@ -73,6 +74,9 @@ fun AppNavGraph() {
                 onNavigateToChat = {
                     navController.navigate("chat")
                 },
+                onNavigateToSupervisor = {
+                    navController.navigate("supervisor")
+                },
                 onNavigateToActividadDetail = { actividadId ->
                     navController.navigate("actividades/detail/$actividadId")
                 },
@@ -81,6 +85,17 @@ fun AppNavGraph() {
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
                     }
+                }
+            )
+        }
+
+        // === RUTA DE MI SUPERVISOR ===
+
+        composable("supervisor") {
+            MiSupervisorScreen(
+                usuarioActual = currentUser,
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }
