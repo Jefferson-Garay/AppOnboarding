@@ -37,6 +37,7 @@ fun HomeScreen(
     onNavigateToRecursos: () -> Unit,
     onNavigateToRoles: () -> Unit,
     onNavigateToChat: () -> Unit,
+    onNavigateToSupervisor: () -> Unit,
     onNavigateToActividadDetail: (String) -> Unit,
     onLogout: () -> Unit
 ) {
@@ -61,6 +62,7 @@ fun HomeScreen(
     val menuItems = listOf(
         DrawerMenuItem("inicio", "Inicio", Icons.Outlined.Home, Icons.Filled.Home),
         DrawerMenuItem("chat", "Asistente Virtual", Icons.Outlined.Chat, Icons.Filled.Chat),
+        DrawerMenuItem("supervisor", "Mi Supervisor", Icons.Outlined.SupervisorAccount, Icons.Filled.SupervisorAccount),
         DrawerMenuItem("actividades", "Mis Actividades", Icons.Outlined.Assignment, Icons.Filled.Assignment),
         DrawerMenuItem("recursos", "Recursos", Icons.Outlined.Folder, Icons.Filled.Folder),
         DrawerMenuItem("roles", "Gestionar Roles", Icons.Outlined.Security, Icons.Filled.Security),
@@ -132,6 +134,7 @@ fun HomeScreen(
 
                                 when (item.id) {
                                     "chat" -> onNavigateToChat()
+                                    "supervisor" -> onNavigateToSupervisor()
                                     "actividades" -> onNavigateToActividades()
                                     "recursos" -> onNavigateToRecursos()
                                     "roles" -> onNavigateToRoles()
