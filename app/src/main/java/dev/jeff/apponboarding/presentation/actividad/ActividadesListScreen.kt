@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,34 +21,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import dev.jeff.apponboarding.data.model.ActividadModel
-import dev.jeff.apponboarding.ui.theme.AzulOscuro
-import dev.jeff.apponboarding.ui.theme.FondoGris
-import dev.jeff.apponboarding.ui.theme.VerdeExito
-import java.time.format.DateTimeFormatter
 import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+
+// Colores locales si no importas el Theme
+private val AzulOscuro = Color(0xFF0D1B3E)
+private val VerdeExito = Color(0xFF4CAF50)
+private val FondoGris = Color(0xFFF5F5F5)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActividadesListScreen(
     viewModel: ActividadViewModel,
-    usuarioRef: String, 
+    usuarioRef: String,
     onNavigateToCreate: () -> Unit,
     onNavigateToDetail: (String) -> Unit
 ) {
     val state by viewModel.actividadesState.collectAsState()
-    val deleteState by viewModel.deleteState.collectAsState()
+    var filtroSeleccionado by remember { mutableStateOf("Todas") }
 
     LaunchedEffect(Unit) {
         viewModel.loadActividadesByUsuario(usuarioRef)
-    }
-
-    LaunchedEffect(deleteState) {
-        if (deleteState is DeleteActividadState.Success) {
-            viewModel.loadActividadesByUsuario(usuarioRef)
-            viewModel.resetDeleteState()
-        }
     }
 
     Scaffold(
@@ -62,22 +57,59 @@ fun ActividadesListScreen(
         ) {
             when (val currentState = state) {
                 is ActividadesState.Success -> {
-                    val actividades = currentState.actividades
-                    ProgressHeader(actividades = actividades)
+                    // --- FIX: FILTRAR MENSAJES OCULTOS ---
+                    // Ignoramos cualquier actividad cuyo tipo empiece con "MSG_"
+                    val actividadesReales = currentState.actividades.filter { !it.tipo.startsWith("MSG_") }
 
-                    if (actividades.isEmpty()) {
-                        Box(Modifier.fillMaxSize(), Alignment.Center) { Text("No tienes actividades aún") }
+                    ProgressHeader(actividades = actividadesReales)
+
+                    // Chips de Filtro
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = filtroSeleccionado == "Todas",
+                            onClick = { filtroSeleccionado = "Todas" },
+                            label = { Text("Todas") }
+                        )
+                        FilterChip(
+                            selected = filtroSeleccionado == "Pendientes",
+                            onClick = { filtroSeleccionado = "Pendientes" },
+                            label = { Text("Pendientes") }
+                        )
+                        FilterChip(
+                            selected = filtroSeleccionado == "Completadas",
+                            onClick = { filtroSeleccionado = "Completadas" },
+                            label = { Text("Listas") }
+                        )
+                    }
+
+                    val actividadesFiltradas = when(filtroSeleccionado) {
+                        "Pendientes" -> actividadesReales.filter { !it.estado.equals("Completada", ignoreCase = true) }
+                        "Completadas" -> actividadesReales.filter { it.estado.equals("Completada", ignoreCase = true) }
+                        else -> actividadesReales
+                    }
+
+                    if (actividadesFiltradas.isEmpty()) {
+                        Box(Modifier.fillMaxSize(), Alignment.Center) {
+                            Text("No hay actividades en esta categoría", color = Color.Gray)
+                        }
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(actividades, key = { it.id ?: it.hashCode() }) { actividad ->
+                            items(actividadesFiltradas, key = { it.id ?: it.hashCode() }) { actividad ->
                                 ActividadCard(
                                     actividad = actividad,
-                                    // El toggle ahora se manejará en el detalle, la lista es de solo lectura por ahora
-                                    onToggle = { /* No-op */ }, 
+                                    onToggle = {
+                                        val nuevoEstado = if (actividad.estado.equals("Completada", ignoreCase = true)) "Pendiente" else "Completada"
+                                        viewModel.cambiarEstadoActividad(actividad.id ?: "", actividad, nuevoEstado, usuarioRef)
+                                    },
                                     onClick = { onNavigateToDetail(actividad.id ?: "") }
                                 )
                             }
@@ -91,10 +123,6 @@ fun ActividadesListScreen(
                     Box(Modifier.fillMaxSize(), Alignment.Center) { Text("Error: ${currentState.message}") }
                 }
                 else -> {}
-            }
-
-            if (deleteState is DeleteActividadState.Loading) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -116,28 +144,36 @@ private fun ProgressHeader(actividades: List<ActividadModel>) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Calendario de\nActividades",
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 24.sp
-            )
-            Box(contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(
-                    progress = progreso, // Sintaxis corregida para M3
-                    color = VerdeExito,
-                    trackColor = Color.White.copy(alpha = 0.3f),
-                    strokeWidth = 5.dp,
-                    modifier = Modifier.size(60.dp)
+            Column {
+                Text(
+                    text = "Tu Progreso",
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 14.sp
                 )
                 Text(
-                    text = "${(progreso * 100).toInt()}%\nListo",
+                    text = "${(progreso * 100).toInt()}% Completado",
                     color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
                 )
+                Text(
+                    text = "$completadas de $total actividades",
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 14.sp
+                )
+            }
+
+            Box(contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    progress = { progreso },
+                    color = VerdeExito,
+                    trackColor = Color.White.copy(alpha = 0.2f),
+                    strokeWidth = 6.dp,
+                    modifier = Modifier.size(60.dp)
+                )
+                if (progreso == 1f) {
+                    Icon(Icons.Default.CheckCircle, null, tint = VerdeExito, modifier = Modifier.size(24.dp))
+                }
             }
         }
     }
@@ -150,7 +186,7 @@ private fun ActividadCard(actividad: ActividadModel, onToggle: () -> Unit, onCli
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = if(isCompleted) Color(0xFFE8F5E9) else Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
@@ -165,27 +201,30 @@ private fun ActividadCard(actividad: ActividadModel, onToggle: () -> Unit, onCli
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(text = actividad.titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = actividad.titulo,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if(isCompleted) Color.Gray else Color.Black
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     InfoChip(text = actividad.tipo, icon = Icons.Default.CalendarToday)
-                    // Asumo que quieres mostrar la fecha de inicio formateada
+
                     val formattedDate = try {
-                        OffsetDateTime.parse(actividad.fechaInicio).format(DateTimeFormatter.ofPattern("dd MMM"))
+                        if (actividad.fechaInicio.contains("T")) {
+                            OffsetDateTime.parse(actividad.fechaInicio).format(DateTimeFormatter.ofPattern("dd MMM"))
+                        } else {
+                            actividad.fechaInicio
+                        }
                     } catch (e: Exception) {
                         "S/F"
                     }
                     InfoChip(text = formattedDate, icon = Icons.Default.Schedule)
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = actividad.descripcion,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
-                )
             }
         }
     }

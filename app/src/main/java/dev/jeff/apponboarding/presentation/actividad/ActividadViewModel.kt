@@ -16,6 +16,12 @@ class ActividadViewModel(
     private val _actividadesState = MutableStateFlow<ActividadesState>(ActividadesState.Idle)
     val actividadesState: StateFlow<ActividadesState> = _actividadesState
 
+    private val _notificacionesState = MutableStateFlow<List<ActividadModel>>(emptyList())
+    val notificacionesState: StateFlow<List<ActividadModel>> = _notificacionesState
+
+    private val _pendientesCount = MutableStateFlow(0)
+    val pendientesCount: StateFlow<Int> = _pendientesCount
+
     private val _createState = MutableStateFlow<CreateActividadState>(CreateActividadState.Idle)
     val createState: StateFlow<CreateActividadState> = _createState
 
@@ -25,66 +31,76 @@ class ActividadViewModel(
     private val _updateState = MutableStateFlow<UpdateActividadState>(UpdateActividadState.Idle)
     val updateState: StateFlow<UpdateActividadState> = _updateState
 
-    // Estado para el contador de notificaciones
-    private val _pendientesCount = MutableStateFlow(0)
-    val pendientesCount: StateFlow<Int> = _pendientesCount
+    private val _mensajeEmergente = MutableStateFlow<ActividadModel?>(null)
+    val mensajeEmergente: StateFlow<ActividadModel?> = _mensajeEmergente
 
-    // Cargar todas las actividades
-    fun loadActividades() {
-        viewModelScope.launch {
-            _actividadesState.value = ActividadesState.Loading
-            val actividades = repository.getActividades()
-            _actividadesState.value = ActividadesState.Success(actividades)
-        }
+    private fun List<ActividadModel>.filtrarTareasReales(): List<ActividadModel> {
+        return this.filter { !it.tipo.startsWith("MSG_") }
     }
 
-    // Cargar actividades de un usuario
     fun loadActividadesByUsuario(usuarioRef: String) {
         viewModelScope.launch {
             _actividadesState.value = ActividadesState.Loading
-            val actividades = repository.getActividadesByUsuario(usuarioRef)
-            _actividadesState.value = ActividadesState.Success(actividades)
+            try {
+                val actividadesRaw = repository.getActividadesByUsuario(usuarioRef)
+
+                // 1. Filtramos para obtener solo tareas reales
+                val tareasReales = actividadesRaw.filtrarTareasReales()
+
+                // Lista principal (ordenada)
+                _actividadesState.value = ActividadesState.Success(tareasReales.sortedBy { it.fechaInicio })
+
+                // 2. CORRECCIÓN: Notificaciones solo de tareas reales (para no inflar el contador)
+                val notificacionesReales = tareasReales.sortedByDescending { it.fechaInicio }
+                _notificacionesState.value = notificacionesReales
+
+                // 3. CORRECCIÓN: Contador de pendientes usando solo la lista filtrada
+                val pendientes = tareasReales.count { !it.estado.equals("Completada", ignoreCase = true) }
+                _pendientesCount.value = pendientes
+
+                // 4. Buscar mensajes para POP-UP (Aquí sí buscamos MSG_)
+                val mensajeNuevo = actividadesRaw.firstOrNull {
+                    it.tipo.startsWith("MSG_") &&
+                            !it.estado.equals("VISTO", ignoreCase = true) &&
+                            !it.estado.equals("COMPLETADA", ignoreCase = true)
+                }
+                _mensajeEmergente.value = mensajeNuevo
+
+            } catch (e: Exception) {
+                _actividadesState.value = ActividadesState.Error("Error al cargar actividades")
+            }
         }
     }
 
-    // Cargar actividades pendientes
-    fun loadActividadesPendientes(usuarioRef: String) {
+    // Método corregido para respuesta instantánea
+    fun marcarMensajeVisto(actividad: ActividadModel) {
+        // 1. UI Optimista: Ocultar inmediatamente el popup
+        _mensajeEmergente.value = null
+
+        // 2. Actualizar en background
         viewModelScope.launch {
-            _actividadesState.value = ActividadesState.Loading
-            val actividades = repository.getActividadesPendientes(usuarioRef)
-            _actividadesState.value = ActividadesState.Success(actividades)
-            // Actualizar contador
-            _pendientesCount.value = actividades.size
+            val nuevoEstado = "VISTO"
+            repository.updateEstadoActividad(actividad.id ?: "", "\"$nuevoEstado\"")
+            // No recargamos toda la lista para evitar parpadeos innecesarios,
+            // ya que el popup ya se cerró visualmente.
         }
     }
 
-    // Cargar SOLO el contador de pendientes (para notificaciones)
     fun loadPendientesCount(usuarioRef: String) {
         viewModelScope.launch {
-            val actividades = repository.getActividadesPendientes(usuarioRef)
-            _pendientesCount.value = actividades.size
+            try {
+                val actividadesRaw = repository.getActividadesPendientes(usuarioRef)
+                val actividadesReales = actividadesRaw.filtrarTareasReales() // Filtrar también aquí
+                _pendientesCount.value = actividadesReales.size
+                _notificacionesState.value = actividadesReales.sortedByDescending { it.fechaInicio }
+            } catch (e: Exception) {
+                _pendientesCount.value = 0
+            }
         }
     }
 
-    // Cargar actividades por estado
-    fun loadActividadesByEstado(estado: String) {
-        viewModelScope.launch {
-            _actividadesState.value = ActividadesState.Loading
-            val actividades = repository.getActividadesByEstado(estado)
-            _actividadesState.value = ActividadesState.Success(actividades)
-        }
-    }
+    // ... (Resto de métodos create, update, delete igual que antes) ...
 
-    // Cargar actividades por rango de fechas
-    fun loadActividadesByRangoFechas(fechaInicio: String, fechaFin: String) {
-        viewModelScope.launch {
-            _actividadesState.value = ActividadesState.Loading
-            val actividades = repository.getActividadesByRangoFechas(fechaInicio, fechaFin)
-            _actividadesState.value = ActividadesState.Success(actividades)
-        }
-    }
-
-    // Crear actividad
     fun createActividad(actividad: ActividadRequest) {
         viewModelScope.launch {
             _createState.value = CreateActividadState.Loading
@@ -92,107 +108,79 @@ class ActividadViewModel(
             if (result != null) {
                 _createState.value = CreateActividadState.Success(result)
             } else {
-                _createState.value = CreateActividadState.Error("Error al crear la actividad")
+                _createState.value = CreateActividadState.Error("Error al crear")
             }
         }
     }
 
-    // Actualizar actividad
-    fun updateActividad(id: String, actividad: ActividadRequest) {
+    fun cambiarEstadoActividad(actividadId: String, actividad: ActividadModel, nuevoEstado: String, usuarioRef: String) {
         viewModelScope.launch {
-            _updateState.value = UpdateActividadState.Loading
-            val result = repository.updateActividad(id, actividad)
-            if (result != null) {
-                _updateState.value = UpdateActividadState.Success(result)
+            val success = repository.updateEstadoActividad(actividadId, "\"$nuevoEstado\"")
+            if (success) {
+                loadActividadesByUsuario(usuarioRef)
             } else {
-                _updateState.value = UpdateActividadState.Error("Error al actualizar la actividad")
-            }
-        }
-    }
-
-    // Cambiar estado de actividad (para notificaciones)
-    fun cambiarEstadoActividad(
-        actividadId: String,
-        actividad: ActividadModel,
-        nuevoEstado: String,
-        usuarioRef: String
-    ) {
-        viewModelScope.launch {
-            val actividadRequest = ActividadRequest(
-                titulo = actividad.titulo,
-                descripcion = actividad.descripcion,
-                tipo = actividad.tipo,
-                fechaInicio = actividad.fechaInicio,
-                fechaFin = actividad.fechaFin,
-                usuarioRef = actividad.usuarioRef,
-                estado = nuevoEstado
-            )
-
-            val result = repository.updateActividad(actividadId, actividadRequest)
-
-            if (result != null) {
-                // Recargar contador de pendientes
-                loadPendientesCount(usuarioRef)
-                // Recargar lista si está visible
-                if (_actividadesState.value is ActividadesState.Success) {
-                    loadActividadesPendientes(usuarioRef)
+                val request = ActividadRequest(
+                    titulo = actividad.titulo,
+                    descripcion = actividad.descripcion,
+                    tipo = actividad.tipo,
+                    fechaInicio = actividad.fechaInicio,
+                    fechaFin = actividad.fechaFin,
+                    usuarioRef = actividad.usuarioRef,
+                    estado = nuevoEstado
+                )
+                if (repository.updateActividad(actividadId, request) != null) {
+                    loadActividadesByUsuario(usuarioRef)
                 }
             }
         }
     }
 
-    // Eliminar actividad
-    fun deleteActividad(id: String) {
+    fun updateActividad(id: String, actividad: ActividadRequest) {
         viewModelScope.launch {
-            _deleteState.value = DeleteActividadState.Loading
-            val success = repository.deleteActividad(id)
-            if (success) {
-                _deleteState.value = DeleteActividadState.Success
+            _updateState.value = UpdateActividadState.Loading
+            if (repository.updateActividad(id, actividad) != null) {
+                _updateState.value = UpdateActividadState.Success(repository.getActividadById(id)!!)
             } else {
-                _deleteState.value = DeleteActividadState.Error("Error al eliminar la actividad")
+                _updateState.value = UpdateActividadState.Error("Fallo update")
             }
         }
     }
 
-    // Resetear estados
-    fun resetCreateState() {
-        _createState.value = CreateActividadState.Idle
+    fun deleteActividad(id: String) {
+        viewModelScope.launch {
+            _deleteState.value = DeleteActividadState.Loading
+            if (repository.deleteActividad(id)) {
+                _deleteState.value = DeleteActividadState.Success
+            } else {
+                _deleteState.value = DeleteActividadState.Error("Error al eliminar")
+            }
+        }
     }
 
-    fun resetDeleteState() {
-        _deleteState.value = DeleteActividadState.Idle
-    }
-
-    fun resetUpdateState() {
-        _updateState.value = UpdateActividadState.Idle
-    }
+    fun resetCreateState() { _createState.value = CreateActividadState.Idle }
+    fun resetDeleteState() { _deleteState.value = DeleteActividadState.Idle }
+    fun resetUpdateState() { _updateState.value = UpdateActividadState.Idle }
 }
 
-// Estados para la lista de actividades
+// Sealed classes (iguales)
 sealed class ActividadesState {
     object Idle : ActividadesState()
     object Loading : ActividadesState()
     data class Success(val actividades: List<ActividadModel>) : ActividadesState()
     data class Error(val message: String) : ActividadesState()
 }
-
-// Estados para crear actividad
 sealed class CreateActividadState {
     object Idle : CreateActividadState()
     object Loading : CreateActividadState()
     data class Success(val actividad: ActividadModel) : CreateActividadState()
     data class Error(val message: String) : CreateActividadState()
 }
-
-// Estados para eliminar actividad
 sealed class DeleteActividadState {
     object Idle : DeleteActividadState()
     object Loading : DeleteActividadState()
     object Success : DeleteActividadState()
     data class Error(val message: String) : DeleteActividadState()
 }
-
-// Estados para actualizar actividad
 sealed class UpdateActividadState {
     object Idle : UpdateActividadState()
     object Loading : UpdateActividadState()
