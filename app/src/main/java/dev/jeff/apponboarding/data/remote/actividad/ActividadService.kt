@@ -3,53 +3,58 @@ package dev.jeff.apponboarding.data.remote.actividad
 import dev.jeff.apponboarding.data.model.ActividadCountResponse
 import dev.jeff.apponboarding.data.model.ActividadModel
 import dev.jeff.apponboarding.data.model.ActividadRequest
+import dev.jeff.apponboarding.data.model.ResumenGlobalResponse
+import dev.jeff.apponboarding.data.model.ResumenUsuarioResponse
+import retrofit2.Response
 import retrofit2.http.*
 
 interface ActividadService {
 
-    // Obtener todas las actividades
+    // 🔹 CRUD Básico (Asumiendo que siguen el estándar del controlador)
     @GET("Actividad")
     suspend fun getActividades(): List<ActividadModel>
 
-    // Crear una actividad
-    @POST("Actividad")
-    suspend fun createActividad(@Body actividad: ActividadRequest): ActividadModel
-
-    // Obtener actividad por ID
     @GET("Actividad/{id}")
     suspend fun getActividadById(@Path("id") id: String): ActividadModel
 
-    // Actualizar actividad
+    @POST("Actividad")
+    suspend fun createActividad(@Body actividad: ActividadRequest): ActividadModel
+
     @PUT("Actividad/{id}")
-    suspend fun updateActividad(
-        @Path("id") id: String,
-        @Body actividad: ActividadRequest
-    ): ActividadModel
+    suspend fun updateActividad(@Path("id") id: String, @Body actividad: ActividadRequest): ActividadModel
 
-    // Eliminar actividad
     @DELETE("Actividad/{id}")
-    suspend fun deleteActividad(@Path("id") id: String): Map<String, String>
+    suspend fun deleteActividad(@Path("id") id: String): Response<Unit>
 
-    // Obtener actividades por usuario
+    // 🔹 Endpoints Específicos de la Imagen
+
+    // GET /api/Actividad/usuario/{usuarioRef} (Asumido estándar para listas por usuario)
     @GET("Actividad/usuario/{usuarioRef}")
     suspend fun getActividadesByUsuario(@Path("usuarioRef") usuarioRef: String): List<ActividadModel>
 
-    // Obtener actividades pendientes de un usuario
-    @GET("Actividad/pendientes/{usuarioRef}")
-    suspend fun getActividadesPendientes(@Path("usuarioRef") usuarioRef: String): List<ActividadModel>
-
-    // Obtener actividades por estado
-    @GET("Actividad/estado/{estado}")
-    suspend fun getActividadesByEstado(@Path("estado") estado: String): List<ActividadModel>
-
-    // Obtener actividades por rango de fechas
+    // GET /api/Actividad/rango-fechas
     @GET("Actividad/rango-fechas")
     suspend fun getActividadesByRangoFechas(
         @Query("fechaInicio") fechaInicio: String,
         @Query("fechaFin") fechaFin: String
     ): List<ActividadModel>
 
-    // Obtener conteo de actividades de un usuario
+    // GET /api/Actividad/count/{usuarioRef}
     @GET("Actividad/count/{usuarioRef}")
     suspend fun getActividadesCount(@Path("usuarioRef") usuarioRef: String): ActividadCountResponse
+
+    // PATCH /api/Actividad/{id}/estado
+    @PATCH("Actividad/{id}/estado")
+    suspend fun cambiarEstadoActividad(
+        @Path("id") id: String,
+        @Body nuevoEstado: String // O un objeto según requiera tu API (ej. PatchDoc)
+    ): ActividadModel
+
+    // GET /api/Actividad/resumen/{usuarioRef} (Para Dashboard Usuario)
+    @GET("Actividad/resumen/{usuarioRef}")
+    suspend fun getResumenUsuario(@Path("usuarioRef") usuarioRef: String): ResumenUsuarioResponse
+
+    // GET /api/Actividad/resumen-global (Para Dashboard Global)
+    @GET("Actividad/resumen-global")
+    suspend fun getResumenGlobal(): ResumenGlobalResponse
 }

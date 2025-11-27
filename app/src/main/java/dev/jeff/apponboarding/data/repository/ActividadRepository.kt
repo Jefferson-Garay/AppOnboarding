@@ -4,6 +4,8 @@ import android.util.Log
 import dev.jeff.apponboarding.data.model.ActividadCountResponse
 import dev.jeff.apponboarding.data.model.ActividadModel
 import dev.jeff.apponboarding.data.model.ActividadRequest
+import dev.jeff.apponboarding.data.model.ResumenGlobalResponse
+import dev.jeff.apponboarding.data.model.ResumenUsuarioResponse
 import dev.jeff.apponboarding.data.remote.RetrofitInstance
 import retrofit2.HttpException
 
@@ -90,28 +92,27 @@ class ActividadRepository {
         }
     }
 
-    // Obtener actividades pendientes
+    // 🔹 CORRECCIÓN: Filtro Local para Pendientes
+    // Como no existe el endpoint en tu API, filtramos la lista del usuario aquí.
     suspend fun getActividadesPendientes(usuarioRef: String): List<ActividadModel> {
         return try {
-            api.getActividadesPendientes(usuarioRef)
-        } catch (e: HttpException) {
-            Log.e("ACTIVIDAD", "Error HTTP obteniendo pendientes: ${e.code()}")
-            emptyList()
+            val actividades = api.getActividadesByUsuario(usuarioRef)
+            // Filtramos las que NO estén completadas
+            actividades.filter { it.estado?.lowercase() != "completada" }
         } catch (e: Exception) {
-            Log.e("ACTIVIDAD", "Error obteniendo pendientes: ${e.message}")
+            Log.e("ACTIVIDAD", "Error filtrando pendientes: ${e.message}")
             emptyList()
         }
     }
 
-    // Obtener actividades por estado
+    // 🔹 CORRECCIÓN: Filtro Local por Estado
+    // Si tu API no tiene endpoint por estado, bajamos todas y filtramos.
     suspend fun getActividadesByEstado(estado: String): List<ActividadModel> {
         return try {
-            api.getActividadesByEstado(estado)
-        } catch (e: HttpException) {
-            Log.e("ACTIVIDAD", "Error HTTP obteniendo por estado: ${e.code()}")
-            emptyList()
+            val todas = api.getActividades()
+            todas.filter { it.estado?.equals(estado, ignoreCase = true) == true }
         } catch (e: Exception) {
-            Log.e("ACTIVIDAD", "Error obteniendo por estado: ${e.message}")
+            Log.e("ACTIVIDAD", "Error filtrando por estado: ${e.message}")
             emptyList()
         }
     }
@@ -141,6 +142,41 @@ class ActividadRepository {
             null
         } catch (e: Exception) {
             Log.e("ACTIVIDAD", "Error obteniendo conteo: ${e.message}")
+            null
+        }
+    }
+
+    // 🔹 NUEVO: Cambiar estado (PATCH)
+    suspend fun cambiarEstadoActividad(id: String, nuevoEstado: String): ActividadModel? {
+        return try {
+            api.cambiarEstadoActividad(id, nuevoEstado)
+        } catch (e: HttpException) {
+            Log.e("ACTIVIDAD", "Error HTTP cambiando estado: ${e.code()}")
+            null
+        } catch (e: Exception) {
+            Log.e("ACTIVIDAD", "Error cambiando estado: ${e.message}")
+            null
+        }
+    }
+
+    // --- DASHBOARD ---
+
+    // 🔹 NUEVO: Obtener Resumen Global
+    suspend fun getResumenGlobal(): ResumenGlobalResponse? {
+        return try {
+            api.getResumenGlobal()
+        } catch (e: Exception) {
+            Log.e("ACTIVIDAD", "Error obteniendo resumen global: ${e.message}")
+            null
+        }
+    }
+
+    // 🔹 NUEVO: Obtener Resumen Usuario
+    suspend fun getResumenUsuario(usuarioRef: String): ResumenUsuarioResponse? {
+        return try {
+            api.getResumenUsuario(usuarioRef)
+        } catch (e: Exception) {
+            Log.e("ACTIVIDAD", "Error obteniendo resumen usuario: ${e.message}")
             null
         }
     }

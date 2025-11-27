@@ -27,13 +27,16 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
+
     buildFeatures {
         compose = true
     }
@@ -56,7 +59,6 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.core.i18n)
 
-
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -68,5 +70,10 @@ dependencies {
     // 🔥 RETROFIT + GSON
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+
     implementation("com.kizitonwose.calendar:compose:2.5.0")
+
+    // 📊 CHARTS
+    // Solo dejamos la oficial que funciona:
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 }

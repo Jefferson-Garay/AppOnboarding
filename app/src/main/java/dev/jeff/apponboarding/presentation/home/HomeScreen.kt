@@ -33,6 +33,7 @@ data class DrawerMenuItem(
 fun HomeScreen(
     usuario: UsuarioModel?,
     actividadViewModel: ActividadViewModel,
+    onNavigateToDashboard: () -> Unit,
     onNavigateToActividades: () -> Unit,
     onNavigateToRecursos: () -> Unit,
     onNavigateToRoles: () -> Unit,
@@ -62,6 +63,7 @@ fun HomeScreen(
     // Items del menú
     val menuItems = listOf(
         DrawerMenuItem("inicio", "Inicio", Icons.Outlined.Home, Icons.Filled.Home),
+        DrawerMenuItem("dashboard", "Dashboard", Icons.Outlined.BarChart, Icons.Filled.BarChart),
         DrawerMenuItem("chat", "Asistente Virtual", Icons.Outlined.Chat, Icons.Filled.Chat),
         DrawerMenuItem("supervisor", "Mi Supervisor", Icons.Outlined.SupervisorAccount, Icons.Filled.SupervisorAccount),
         DrawerMenuItem("actividades", "Mis Actividades", Icons.Outlined.Assignment, Icons.Filled.Assignment),
@@ -134,6 +136,8 @@ fun HomeScreen(
                                 scope.launch { drawerState.close() }
 
                                 when (item.id) {
+                                    "inicio" -> { /* Ya estamos aquí */ }
+                                    "dashboard" -> onNavigateToDashboard()
                                     "chat" -> onNavigateToChat()
                                     "supervisor" -> onNavigateToSupervisor()
                                     "actividades" -> onNavigateToActividades()

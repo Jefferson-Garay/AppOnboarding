@@ -10,6 +10,7 @@ import dev.jeff.apponboarding.data.repository.ChatRepository
 import dev.jeff.apponboarding.data.repository.RecursoRepository
 import dev.jeff.apponboarding.data.repository.RolRepository
 import dev.jeff.apponboarding.data.repository.UsuarioRepository
+import dev.jeff.apponboarding.presentation.Dash.DashboardScreen
 import dev.jeff.apponboarding.presentation.actividad.*
 import dev.jeff.apponboarding.presentation.auth.LoginScreen
 import dev.jeff.apponboarding.presentation.auth.LoginState
@@ -63,6 +64,11 @@ fun AppNavGraph() {
             HomeScreen(
                 usuario = currentUser,
                 actividadViewModel = actividadViewModel,
+                // ✅ 1. Navegación al Dashboard conectada
+                onNavigateToDashboard = {
+                    val userId = currentUser?.id?.toString() ?: ""
+                    navController.navigate("dashboard/$userId")
+                },
                 onNavigateToActividades = {
                     navController.navigate("actividades")
                 },
@@ -94,7 +100,6 @@ fun AppNavGraph() {
         }
 
         // === RUTA DE MI SUPERVISOR ===
-
         composable("supervisor") {
             MiSupervisorScreen(
                 usuarioActual = currentUser,
@@ -105,7 +110,6 @@ fun AppNavGraph() {
         }
 
         // === RUTA DE AYUDA ===
-
         composable("ayuda") {
             AyudaScreen(
                 onNavigateBack = {
@@ -127,7 +131,6 @@ fun AppNavGraph() {
         }
 
         // === RUTA DE CHAT ===
-
         composable("chat") {
             ChatScreen(
                 viewModel = chatViewModel,
@@ -139,7 +142,6 @@ fun AppNavGraph() {
         }
 
         // === RUTAS DE ACTIVIDADES ===
-
         composable("actividades") {
             ActividadesListScreen(
                 viewModel = actividadViewModel,
@@ -180,7 +182,6 @@ fun AppNavGraph() {
         }
 
         // === RUTAS DE RECURSOS ===
-
         composable("recursos") {
             RecursosListScreen(
                 viewModel = recursoViewModel,
@@ -217,7 +218,6 @@ fun AppNavGraph() {
         }
 
         // === RUTAS DE ROLES ===
-
         composable("roles") {
             RolesListScreen(
                 viewModel = rolViewModel,
@@ -252,6 +252,22 @@ fun AppNavGraph() {
                 onNavigateToEdit = { id ->
                     navController.popBackStack()
                 }
+            )
+        }
+
+        // ✅ 2. Ruta del Dashboard Configurada Correctamente
+        composable(
+            route = "dashboard/{usuarioRef}"
+        ) { backStackEntry ->
+            val usuarioRef = backStackEntry.arguments?.getString("usuarioRef") ?: ""
+
+            // Instanciamos el Repositorio aquí para pasárselo a la pantalla
+            val repository = remember { ActividadRepository() }
+
+            DashboardScreen(
+                navController = navController,
+                usuarioRef = usuarioRef,
+                repository = repository // Pasamos el repositorio en lugar del servicio
             )
         }
     }

@@ -25,3 +25,25 @@ data class ActividadCountResponse(
     val usuarioRef: String,
     val totalActividades: Int
 )
+
+/* 🔹 LO NUEVO QUE FALTABA — NO QUITÉ NADA */
+data class ResumenUsuarioResponse(
+    val rango_0_25: Int,
+    val rango_26_50: Int,
+    val rango_51_75: Int,
+    val rango_76_100: Int
+)
+
+data class ResumenIndividualResponse(
+    val usuarioRef: String,
+    val rango_0_25: Int,
+    val rango_26_50: Int,
+    val rango_51_75: Int,
+    val rango_76_100: Int
+)
+data class ResumenGlobalResponse(
+    val rango_0_25: Int,
+    val rango_26_50: Int,
+    val rango_51_75: Int,
+    val rango_76_100: Int
+)
