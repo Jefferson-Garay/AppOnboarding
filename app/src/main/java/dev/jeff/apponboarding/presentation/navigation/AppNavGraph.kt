@@ -17,17 +17,20 @@ import dev.jeff.apponboarding.presentation.mensaje.ProgramarMensajesScreen
 import dev.jeff.apponboarding.presentation.recurso.*
 import dev.jeff.apponboarding.presentation.rol.*
 import dev.jeff.apponboarding.presentation.supervisor.MiSupervisorScreen
+import dev.jeff.apponboarding.presentation.usuario.UsuarioDetailScreen
+import dev.jeff.apponboarding.presentation.usuario.UsuarioViewModel
+import dev.jeff.apponboarding.presentation.usuario.UsuariosListScreen
 
 @Composable
 fun AppNavGraph() {
     val navController = rememberNavController()
 
-    // ViewModels
     val loginViewModel = remember { LoginViewModel(UsuarioRepository()) }
     val actividadViewModel = remember { ActividadViewModel(ActividadRepository()) }
     val recursoViewModel = remember { RecursoViewModel(RecursoRepository()) }
     val rolViewModel = remember { RolViewModel(RolRepository()) }
     val chatViewModel = remember { ChatViewModel(ChatRepository()) }
+    val usuarioViewModel = remember { UsuarioViewModel() }
 
     var currentUser by remember { mutableStateOf<UsuarioModel?>(null) }
     val loginState by loginViewModel.loginState.collectAsState()
@@ -61,7 +64,8 @@ fun AppNavGraph() {
                 onNavigateToChat = { navController.navigate("chat") },
                 onNavigateToSupervisor = { navController.navigate("supervisor") },
                 onNavigateToAyuda = { navController.navigate("ayuda") },
-                onNavigateToMensajes = { navController.navigate("mensajes") }, // US 10
+                onNavigateToMensajes = { navController.navigate("mensajes") },
+                onNavigateToUsuarios = { navController.navigate("usuarios") },
                 onNavigateToActividadDetail = { actividadId ->
                     navController.navigate("actividades/detail/$actividadId")
                 },
@@ -74,7 +78,6 @@ fun AppNavGraph() {
             )
         }
 
-        // RUTA NUEVA US 10
         composable("mensajes") {
             ProgramarMensajesScreen(
                 usuarioRef = currentUser?.id?.toString() ?: "",
@@ -187,6 +190,34 @@ fun AppNavGraph() {
                 rolId = rolId,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToEdit = { navController.popBackStack() }
+            )
+        }
+
+        composable("usuarios") {
+            UsuariosListScreen(
+                viewModel = usuarioViewModel,
+                onNavigateToCreate = { navController.navigate("usuarios/create") },
+                onNavigateToEdit = { id -> navController.navigate("usuarios/edit/$id") }
+            )
+        }
+
+        composable("usuarios/create") {
+            UsuarioDetailScreen(
+                viewModel = usuarioViewModel,
+                usuarioId = null,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "usuarios/edit/{userId}",
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId")
+            UsuarioDetailScreen(
+                viewModel = usuarioViewModel,
+                usuarioId = userId,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

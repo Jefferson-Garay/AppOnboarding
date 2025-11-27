@@ -59,6 +59,7 @@ fun HomeScreen(
     onNavigateToSupervisor: () -> Unit,
     onNavigateToAyuda: () -> Unit,
     onNavigateToMensajes: () -> Unit,
+    onNavigateToUsuarios: () -> Unit,
     onNavigateToActividadDetail: (String) -> Unit,
     onLogout: () -> Unit
 ) {
@@ -68,12 +69,9 @@ fun HomeScreen(
     var selectedItem by remember { mutableStateOf("inicio") }
     var isDarkTheme by remember { mutableStateOf(false) }
 
-    // ESTADOS DEL VIEWMODEL
     val pendientesCount by actividadViewModel.pendientesCount.collectAsState()
     val actividadesState by actividadViewModel.actividadesState.collectAsState()
     val notificacionesList by actividadViewModel.notificacionesState.collectAsState()
-
-    // ESTADO DEL MENSAJE EMERGENTE
     val mensajePopup by actividadViewModel.mensajeEmergente.collectAsState()
 
     LaunchedEffect(usuario) {
@@ -82,7 +80,6 @@ fun HomeScreen(
         }
     }
 
-    // Cálculo de datos (igual que antes)
     val listaTareasReales = when (val state = actividadesState) {
         is ActividadesState.Success -> state.actividades
         else -> emptyList()
@@ -99,7 +96,7 @@ fun HomeScreen(
         else -> Pair("¡Todo listo! Excelente trabajo.", "Finalizado")
     }
     val textoEtapa = if (!usuario?.nivelOnboarding?.etapa.isNullOrBlank() && usuario?.nivelOnboarding?.etapa != "N/A") {
-        usuario!!.nivelOnboarding.etapa
+        usuario!!.nivelOnboarding!!.etapa
     } else {
         etapaDinamica
     }
@@ -112,6 +109,7 @@ fun HomeScreen(
         DrawerMenuItem("actividades", "Mis Actividades", Icons.Outlined.Assignment, Icons.Filled.Assignment),
         DrawerMenuItem("recursos", "Recursos", Icons.Outlined.Folder, Icons.Filled.Folder),
         DrawerMenuItem("roles", "Gestionar Roles", Icons.Outlined.Security, Icons.Filled.Security),
+        DrawerMenuItem("usuarios", "Gestionar Empleados", Icons.Outlined.People, Icons.Filled.People),
         DrawerMenuItem("perfil", "Mi Información", Icons.Outlined.Person, Icons.Filled.Person),
         DrawerMenuItem("ayuda", "Ayuda", Icons.Outlined.Help, Icons.Filled.Help),
         DrawerMenuItem("configuracion", "Configuración", Icons.Outlined.Settings, Icons.Filled.Settings)
@@ -171,6 +169,7 @@ fun HomeScreen(
                                     "actividades" -> onNavigateToActividades()
                                     "recursos" -> onNavigateToRecursos()
                                     "roles" -> onNavigateToRoles()
+                                    "usuarios" -> onNavigateToUsuarios()
                                     "ayuda" -> onNavigateToAyuda()
                                 }
                             },
@@ -242,13 +241,11 @@ fun HomeScreen(
                     )
                 }
             ) { padding ->
-                // ENVOLTURA BOX PRINCIPAL para superponer elementos
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding) // Respetamos el padding del Scaffold (TopBar)
+                        .padding(padding)
                 ) {
-                    // 1. CONTENIDO DEL HOME (Columna Original)
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -257,7 +254,6 @@ fun HomeScreen(
                     ) {
                         Spacer(Modifier.height(4.dp))
 
-                        // Tarjeta Bienvenida
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
@@ -278,7 +274,6 @@ fun HomeScreen(
                             }
                         }
 
-                        // Tarjeta Notificaciones
                         if (pendientesCount > 0) {
                             Card(
                                 modifier = Modifier.fillMaxWidth().clickable {
@@ -302,7 +297,6 @@ fun HomeScreen(
                             }
                         }
 
-                        // Tarjeta Progreso
                         Card(
                             modifier = Modifier.fillMaxWidth().clickable { onNavigateToActividades() },
                             shape = RoundedCornerShape(16.dp),
@@ -334,7 +328,6 @@ fun HomeScreen(
 
                         Spacer(Modifier.weight(1f))
 
-                        // Tarjeta Contacto
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
@@ -361,14 +354,12 @@ fun HomeScreen(
                         }
                     }
 
-                    // 2. POP-UP SUTIL (Superpuesto)
-                    // Se usa AnimatedVisibility para que entre y salga suavemente
                     AnimatedVisibility(
                         visible = mensajePopup != null,
-                        enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(), // Baja desde arriba
-                        exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(), // Sube para irse
+                        enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+                        exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
                         modifier = Modifier
-                            .align(Alignment.TopCenter) // Posición superior
+                            .align(Alignment.TopCenter)
                             .fillMaxWidth()
                     ) {
                         mensajePopup?.let { msg ->
