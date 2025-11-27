@@ -11,6 +11,7 @@ import dev.jeff.apponboarding.data.repository.HistoryRepository
 import dev.jeff.apponboarding.data.repository.RecursoRepository
 import dev.jeff.apponboarding.data.repository.RolRepository
 import dev.jeff.apponboarding.data.repository.UsuarioRepository
+import dev.jeff.apponboarding.data.repository.*
 import dev.jeff.apponboarding.presentation.actividad.*
 import dev.jeff.apponboarding.presentation.auth.LoginScreen
 import dev.jeff.apponboarding.presentation.auth.LoginState
@@ -22,8 +23,13 @@ import dev.jeff.apponboarding.presentation.configuracion.ConfiguracionViewModel
 import dev.jeff.apponboarding.presentation.history.HistoryScreen
 import dev.jeff.apponboarding.presentation.history.HistoryViewModel
 import dev.jeff.apponboarding.presentation.home.HomeScreen
+import dev.jeff.apponboarding.presentation.mensaje.ProgramarMensajesScreen
 import dev.jeff.apponboarding.presentation.recurso.*
 import dev.jeff.apponboarding.presentation.rol.*
+import dev.jeff.apponboarding.presentation.supervisor.MiSupervisorScreen
+import dev.jeff.apponboarding.presentation.usuario.UsuarioDetailScreen
+import dev.jeff.apponboarding.presentation.usuario.UsuarioViewModel
+import dev.jeff.apponboarding.presentation.usuario.UsuariosListScreen
 
 @Composable
 fun AppNavGraph(
@@ -34,7 +40,6 @@ fun AppNavGraph(
 ) {
     val navController = rememberNavController()
 
-    // ViewModels
     val loginViewModel = remember { LoginViewModel(UsuarioRepository()) }
     val actividadViewModel = remember { ActividadViewModel(ActividadRepository()) }
     val recursoViewModel = remember { RecursoViewModel(RecursoRepository()) }
@@ -45,9 +50,9 @@ fun AppNavGraph(
 
     // Estado del usuario actual
     // Se inicia en null para que obligue a pasar por login
-    var currentUser by remember { mutableStateOf<UsuarioModel?>(null) }
+    val usuarioViewModel = remember { UsuarioViewModel() }
 
-    // Observar estado de login
+    var currentUser by remember { mutableStateOf<UsuarioModel?>(null) }
     val loginState by loginViewModel.loginState.collectAsState()
 
     LaunchedEffect(loginState) {
@@ -72,7 +77,6 @@ fun AppNavGraph(
     // CAMBIO: startDestination restaurado a "login" para forzar autenticación
     NavHost(navController = navController, startDestination = "login") {
 
-        // Pantalla de Login
         composable("login") {
             LoginScreen(
                 viewModel = loginViewModel,
@@ -82,7 +86,6 @@ fun AppNavGraph(
             )
         }
 
-        // Pantalla de Home
         composable("home") {
             HomeScreen(
                 usuario = currentUser,
@@ -99,6 +102,17 @@ fun AppNavGraph(
                 },
                 onNavigateToChat = {
                     navController.navigate("chat")
+                actividadViewModel = actividadViewModel,
+                onNavigateToActividades = { navController.navigate("actividades") },
+                onNavigateToRecursos = { navController.navigate("recursos") },
+                onNavigateToRoles = { navController.navigate("roles") },
+                onNavigateToChat = { navController.navigate("chat") },
+                onNavigateToSupervisor = { navController.navigate("supervisor") },
+                onNavigateToAyuda = { navController.navigate("ayuda") },
+                onNavigateToMensajes = { navController.navigate("mensajes") },
+                onNavigateToUsuarios = { navController.navigate("usuarios") },
+                onNavigateToActividadDetail = { actividadId ->
+                    navController.navigate("actividades/detail/$actividadId")
                 },
                 onNavigateToHistory = {
                     navController.navigate("history")
@@ -140,15 +154,35 @@ fun AppNavGraph(
         }
 
 
-        // === RUTA DE CHAT ===
+        composable("mensajes") {
+            ProgramarMensajesScreen(
+                usuarioRef = currentUser?.id?.toString() ?: "",
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("supervisor") {
+            MiSupervisorScreen(
+                usuarioActual = currentUser,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("ayuda") {
+            AyudaScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSupervisor = { navController.navigate("supervisor") },
+                onNavigateToActividades = { navController.navigate("actividades") },
+                onNavigateToRecursos = { navController.navigate("recursos") },
+                onNavigateToChat = { navController.navigate("chat") }
+            )
+        }
 
         composable("chat") {
             ChatScreen(
                 viewModel = chatViewModel,
                 usuario = currentUser,
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -171,12 +205,8 @@ fun AppNavGraph(
             ActividadesListScreen(
                 viewModel = actividadViewModel,
                 usuarioRef = currentUser?.id?.toString() ?: "",
-                onNavigateToCreate = {
-                    navController.navigate("actividades/create")
-                },
-                onNavigateToDetail = { actividadId ->
-                    navController.navigate("actividades/detail/$actividadId")
-                }
+                onNavigateToCreate = { navController.navigate("actividades/create") },
+                onNavigateToDetail = { id -> navController.navigate("actividades/detail/$id") }
             )
         }
 
@@ -184,9 +214,7 @@ fun AppNavGraph(
             CreateActividadScreen(
                 viewModel = actividadViewModel,
                 usuarioRef = currentUser?.id?.toString() ?: "",
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -197,16 +225,10 @@ fun AppNavGraph(
             val actividadId = backStackEntry.arguments?.getString("actividadId") ?: ""
             ActividadDetailScreen(
                 actividadId = actividadId,
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
-                onNavigateToEdit = { id ->
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEdit = { navController.popBackStack() }
             )
         }
-
-        // === RUTAS DE RECURSOS ===
 
         composable("recursos") {
             RecursosListScreen(
@@ -218,6 +240,8 @@ fun AppNavGraph(
                 onNavigateToDetail = { recursoId ->
                     navController.navigate("recursos/detail/$recursoId")
                 }
+                onNavigateToCreate = { navController.navigate("recursos/create") },
+                onNavigateToDetail = { id -> navController.navigate("recursos/detail/$id") }
             )
         }
 
@@ -225,9 +249,7 @@ fun AppNavGraph(
             CreateRecursoScreen(
                 viewModel = recursoViewModel,
                 adminRef = currentUser?.id?.toString() ?: "",
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -238,32 +260,22 @@ fun AppNavGraph(
             val recursoId = backStackEntry.arguments?.getString("recursoId") ?: ""
             RecursoDetailScreen(
                 recursoId = recursoId,
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
-
-        // === RUTAS DE ROLES ===
 
         composable("roles") {
             RolesListScreen(
                 viewModel = rolViewModel,
-                onNavigateToCreate = {
-                    navController.navigate("roles/create")
-                },
-                onNavigateToDetail = { rolId ->
-                    navController.navigate("roles/detail/$rolId")
-                }
+                onNavigateToCreate = { navController.navigate("roles/create") },
+                onNavigateToDetail = { id -> navController.navigate("roles/detail/$id") }
             )
         }
 
         composable("roles/create") {
             CreateRolScreen(
                 viewModel = rolViewModel,
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -274,12 +286,36 @@ fun AppNavGraph(
             val rolId = backStackEntry.arguments?.getString("rolId") ?: ""
             RolDetailScreen(
                 rolId = rolId,
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
-                onNavigateToEdit = { id ->
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEdit = { navController.popBackStack() }
+            )
+        }
+
+        composable("usuarios") {
+            UsuariosListScreen(
+                viewModel = usuarioViewModel,
+                onNavigateToCreate = { navController.navigate("usuarios/create") },
+                onNavigateToEdit = { id -> navController.navigate("usuarios/edit/$id") }
+            )
+        }
+
+        composable("usuarios/create") {
+            UsuarioDetailScreen(
+                viewModel = usuarioViewModel,
+                usuarioId = null,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "usuarios/edit/{userId}",
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId")
+            UsuarioDetailScreen(
+                viewModel = usuarioViewModel,
+                usuarioId = userId,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

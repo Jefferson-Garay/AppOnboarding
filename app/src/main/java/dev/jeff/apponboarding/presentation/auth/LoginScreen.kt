@@ -53,7 +53,7 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // ===== TÍTULOS COMO EN LA IMAGEN =====
+            // ====== TÍTULOS COMO EN LA IMAGEN =====
             Text(
                 text = "Tata Consultancy Services",
                 color = Color.White,
