@@ -21,6 +21,7 @@ import dev.jeff.apponboarding.presentation.usuario.UsuarioDetailScreen
 import dev.jeff.apponboarding.presentation.usuario.UsuarioViewModel
 import dev.jeff.apponboarding.presentation.usuario.UsuariosListScreen
 import dev.jeff.apponboarding.presentation.configuracion.ConfiguracionScreen
+import dev.jeff.apponboarding.presentation.perfil.MiInformacionScreen
 
 @Composable
 fun AppNavGraph() {
@@ -71,6 +72,7 @@ fun AppNavGraph() {
                 onNavigateToAyuda = { navController.navigate("ayuda") },
                 onNavigateToMensajes = { navController.navigate("mensajes") },
                 onNavigateToConfiguracion = { navController.navigate("configuracion") },
+                onNavigateToPerfil = { navController.navigate("perfil") },
                 onNavigateToUsuarios = { navController.navigate("usuarios") },
                 onNavigateToActividadDetail = { actividadId ->
                     navController.navigate("actividades/detail/$actividadId")
@@ -93,6 +95,21 @@ fun AppNavGraph() {
                 onToggleDarkTheme = { isDarkTheme = it },
                 onNavigateBack = {
                     navController.popBackStack()
+                }
+            )
+        }
+
+        composable("perfil") {
+            MiInformacionScreen(
+                usuario = currentUser,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToActividades = {
+                    navController.navigate("actividades")
+                },
+                onNavigateToSupervisor = {
+                    navController.navigate("supervisor")
                 }
             )
         }

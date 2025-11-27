@@ -61,6 +61,7 @@ fun HomeScreen(
     onNavigateToMensajes: () -> Unit,
     onNavigateToUsuarios: () -> Unit,
     onNavigateToConfiguracion: () -> Unit,
+    onNavigateToPerfil: () -> Unit,
     onNavigateToActividadDetail: (String) -> Unit,
     onLogout: () -> Unit
 ) {
@@ -173,6 +174,7 @@ fun HomeScreen(
                                     "usuarios" -> onNavigateToUsuarios()
                                     "ayuda" -> onNavigateToAyuda()
                                     "configuracion" -> onNavigateToConfiguracion()
+                                    "perfil" -> onNavigateToPerfil()
                                 }
                             },
                             colors = NavigationDrawerItemDefaults.colors(
