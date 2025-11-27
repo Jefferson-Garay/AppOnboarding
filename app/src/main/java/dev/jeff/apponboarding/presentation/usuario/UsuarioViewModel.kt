@@ -31,7 +31,8 @@ class UsuarioViewModel : ViewModel() {
     fun loadUsuarios() {
         viewModelScope.launch {
             _isLoading.value = true
-            _usuariosState.value = repository.getUsuarios()
+            val resultado = repository.getUsuarios()
+            _usuariosState.value = resultado
             _isLoading.value = false
         }
     }
@@ -61,7 +62,7 @@ class UsuarioViewModel : ViewModel() {
             _isLoading.value = true
             val success = repository.updateUsuario(id, usuario)
             if (success) {
-                _opStatus.value = "Usuario actualizado"
+                _opStatus.value = "Usuario actualizado correctamente"
                 loadUsuarios()
             } else {
                 _opStatus.value = "Error al actualizar"
@@ -71,7 +72,6 @@ class UsuarioViewModel : ViewModel() {
     }
 
     fun deleteUsuario(idOriginal: String) {
-        // En teoría idOriginal ya viene limpio desde la UI, pero por seguridad:
         if (idOriginal.isBlank() || idOriginal.length < 10) {
             _opStatus.value = "Error: ID inválido ($idOriginal)"
             return
@@ -79,14 +79,13 @@ class UsuarioViewModel : ViewModel() {
 
         viewModelScope.launch {
             _isLoading.value = true
-            // Llamamos al repositorio
             val success = repository.deleteUsuario(idOriginal)
 
             if (success) {
                 _opStatus.value = "Usuario eliminado correctamente"
-                loadUsuarios() // Recargamos la lista
+                loadUsuarios()
             } else {
-                _opStatus.value = "Error API: No se pudo eliminar el ID $idOriginal"
+                _opStatus.value = "Error API: No se pudo eliminar"
             }
             _isLoading.value = false
         }
@@ -96,7 +95,17 @@ class UsuarioViewModel : ViewModel() {
         _opStatus.value = null
     }
 
+    // --- CAMBIO CLAVE PARA QUE CARGUE LOS DATOS ---
     suspend fun getUsuarioById(id: String): UsuarioModel? {
+        // 1. Primero buscamos en la memoria (Lista ya cargada)
+        // Usamos obtenerIdReal() para asegurar que coincidan los IDs
+        val usuarioEnMemoria = _usuariosState.value.find { it.obtenerIdReal() == id }
+
+        if (usuarioEnMemoria != null) {
+            return usuarioEnMemoria
+        }
+
+        // 2. Si por alguna razón no está en la lista, llamamos a la API
         return repository.getUsuarioById(id)
     }
 }
