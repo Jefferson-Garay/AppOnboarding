@@ -25,11 +25,15 @@ class ActividadViewModel(
     private val _updateState = MutableStateFlow<UpdateActividadState>(UpdateActividadState.Idle)
     val updateState: StateFlow<UpdateActividadState> = _updateState
 
-    // Estado para el contador de notificaciones
+    // Estado para contador de pendientes
     private val _pendientesCount = MutableStateFlow(0)
     val pendientesCount: StateFlow<Int> = _pendientesCount
 
-    // Cargar todas las actividades
+
+    // -----------------------------------------------------------
+    // ---------------------- LOADERS ----------------------------
+    // -----------------------------------------------------------
+
     fun loadActividades() {
         viewModelScope.launch {
             _actividadesState.value = ActividadesState.Loading
@@ -38,7 +42,6 @@ class ActividadViewModel(
         }
     }
 
-    // Cargar actividades de un usuario
     fun loadActividadesByUsuario(usuarioRef: String) {
         viewModelScope.launch {
             _actividadesState.value = ActividadesState.Loading
@@ -47,18 +50,17 @@ class ActividadViewModel(
         }
     }
 
-    // Cargar actividades pendientes
     fun loadActividadesPendientes(usuarioRef: String) {
         viewModelScope.launch {
             _actividadesState.value = ActividadesState.Loading
             val actividades = repository.getActividadesPendientes(usuarioRef)
             _actividadesState.value = ActividadesState.Success(actividades)
+
             // Actualizar contador
             _pendientesCount.value = actividades.size
         }
     }
 
-    // Cargar SOLO el contador de pendientes (para notificaciones)
     fun loadPendientesCount(usuarioRef: String) {
         viewModelScope.launch {
             val actividades = repository.getActividadesPendientes(usuarioRef)
@@ -66,7 +68,6 @@ class ActividadViewModel(
         }
     }
 
-    // Cargar actividades por estado
     fun loadActividadesByEstado(estado: String) {
         viewModelScope.launch {
             _actividadesState.value = ActividadesState.Loading
@@ -75,7 +76,6 @@ class ActividadViewModel(
         }
     }
 
-    // Cargar actividades por rango de fechas
     fun loadActividadesByRangoFechas(fechaInicio: String, fechaFin: String) {
         viewModelScope.launch {
             _actividadesState.value = ActividadesState.Loading
@@ -84,11 +84,16 @@ class ActividadViewModel(
         }
     }
 
-    // Crear actividad
+
+    // -----------------------------------------------------------
+    // ---------------------- CREATE -----------------------------
+    // -----------------------------------------------------------
+
     fun createActividad(actividad: ActividadRequest) {
         viewModelScope.launch {
             _createState.value = CreateActividadState.Loading
             val result = repository.createActividad(actividad)
+
             if (result != null) {
                 _createState.value = CreateActividadState.Success(result)
             } else {
@@ -97,11 +102,16 @@ class ActividadViewModel(
         }
     }
 
-    // Actualizar actividad
+
+    // -----------------------------------------------------------
+    // ---------------------- UPDATE -----------------------------
+    // -----------------------------------------------------------
+
     fun updateActividad(id: String, actividad: ActividadRequest) {
         viewModelScope.launch {
             _updateState.value = UpdateActividadState.Loading
             val result = repository.updateActividad(id, actividad)
+
             if (result != null) {
                 _updateState.value = UpdateActividadState.Success(result)
             } else {
@@ -110,7 +120,41 @@ class ActividadViewModel(
         }
     }
 
-    // Cambiar estado de actividad (para notificaciones)
+    fun updateEstado(id: String, nuevoEstado: String) {
+        viewModelScope.launch {
+            try {
+                _updateState.value = UpdateActividadState.Loading
+
+                val actual = repository.getActividadById(id)
+                if (actual == null) {
+                    _updateState.value = UpdateActividadState.Error("Actividad no encontrada")
+                    return@launch
+                }
+
+                val actividadRequest = ActividadRequest(
+                    titulo = actual.titulo,
+                    descripcion = actual.descripcion,
+                    tipo = actual.tipo,
+                    fechaInicio = actual.fechaInicio,
+                    fechaFin = actual.fechaFin,
+                    usuarioRef = actual.usuarioRef ?: "",
+                    estado = nuevoEstado
+                )
+
+                val result = repository.updateActividad(id, actividadRequest)
+
+                if (result != null) {
+                    _updateState.value = UpdateActividadState.Success(result)
+                } else {
+                    _updateState.value = UpdateActividadState.Error("Error al actualizar estado")
+                }
+
+            } catch (e: Exception) {
+                _updateState.value = UpdateActividadState.Error(e.message ?: "Error inesperado")
+            }
+        }
+    }
+
     fun cambiarEstadoActividad(
         actividadId: String,
         actividad: ActividadModel,
@@ -118,6 +162,7 @@ class ActividadViewModel(
         usuarioRef: String
     ) {
         viewModelScope.launch {
+
             val actividadRequest = ActividadRequest(
                 titulo = actividad.titulo,
                 descripcion = actividad.descripcion,
@@ -131,9 +176,8 @@ class ActividadViewModel(
             val result = repository.updateActividad(actividadId, actividadRequest)
 
             if (result != null) {
-                // Recargar contador de pendientes
                 loadPendientesCount(usuarioRef)
-                // Recargar lista si está visible
+
                 if (_actividadesState.value is ActividadesState.Success) {
                     loadActividadesPendientes(usuarioRef)
                 }
@@ -141,11 +185,16 @@ class ActividadViewModel(
         }
     }
 
-    // Eliminar actividad
+
+    // -----------------------------------------------------------
+    // ---------------------- DELETE -----------------------------
+    // -----------------------------------------------------------
+
     fun deleteActividad(id: String) {
         viewModelScope.launch {
             _deleteState.value = DeleteActividadState.Loading
             val success = repository.deleteActividad(id)
+
             if (success) {
                 _deleteState.value = DeleteActividadState.Success
             } else {
@@ -154,7 +203,11 @@ class ActividadViewModel(
         }
     }
 
-    // Resetear estados
+
+    // -----------------------------------------------------------
+    // ------------------ RESET STATES ---------------------------
+    // -----------------------------------------------------------
+
     fun resetCreateState() {
         _createState.value = CreateActividadState.Idle
     }
@@ -168,7 +221,11 @@ class ActividadViewModel(
     }
 }
 
-// Estados para la lista de actividades
+
+// -----------------------------------------------------------
+// ---------------------- STATES ------------------------------
+// -----------------------------------------------------------
+
 sealed class ActividadesState {
     object Idle : ActividadesState()
     object Loading : ActividadesState()
@@ -176,7 +233,6 @@ sealed class ActividadesState {
     data class Error(val message: String) : ActividadesState()
 }
 
-// Estados para crear actividad
 sealed class CreateActividadState {
     object Idle : CreateActividadState()
     object Loading : CreateActividadState()
@@ -184,7 +240,6 @@ sealed class CreateActividadState {
     data class Error(val message: String) : CreateActividadState()
 }
 
-// Estados para eliminar actividad
 sealed class DeleteActividadState {
     object Idle : DeleteActividadState()
     object Loading : DeleteActividadState()
@@ -192,7 +247,6 @@ sealed class DeleteActividadState {
     data class Error(val message: String) : DeleteActividadState()
 }
 
-// Estados para actualizar actividad
 sealed class UpdateActividadState {
     object Idle : UpdateActividadState()
     object Loading : UpdateActividadState()

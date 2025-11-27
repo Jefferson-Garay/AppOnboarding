@@ -1,6 +1,5 @@
 package dev.jeff.apponboarding.presentation.actividad
 
-
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -13,13 +12,11 @@ import dev.jeff.apponboarding.data.model.ActividadRequest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateActividadScreen(
     viewModel: ActividadViewModel,
-    usuarioRef: String, // Aunque llegue vacío, usaremos el campo manual de abajo
+    usuarioRef: String,
     onNavigateBack: () -> Unit
 ) {
     var titulo by remember { mutableStateOf("") }
@@ -27,7 +24,7 @@ fun CreateActividadScreen(
     var tipo by remember { mutableStateOf("") }
     var estado by remember { mutableStateOf("pendiente") }
 
-    // CAMBIO 1: Variable para escribir el ID manualmente
+    // Campo manual para ID de usuario
     var idUsuarioManual by remember { mutableStateOf("") }
 
     val createState by viewModel.createState.collectAsState()
@@ -51,6 +48,7 @@ fun CreateActividadScreen(
             )
         }
     ) { padding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -59,15 +57,18 @@ fun CreateActividadScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            // --- CAMBIO 1 (VISUAL): CAMPO PARA EL ID DEL USUARIO ---
+            // Campo para usuarioRef
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                )
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Text(
                         text = "Dato Obligatorio (Temporal)",
                         style = MaterialTheme.typography.labelSmall
                     )
+
                     OutlinedTextField(
                         value = idUsuarioManual,
                         onValueChange = { idUsuarioManual = it },
@@ -78,7 +79,6 @@ fun CreateActividadScreen(
                     )
                 }
             }
-            // -----------------------------------------------------
 
             OutlinedTextField(
                 value = titulo,
@@ -93,8 +93,7 @@ fun CreateActividadScreen(
                 onValueChange = { descripcion = it },
                 label = { Text("Descripción") },
                 modifier = Modifier.fillMaxWidth(),
-                minLines = 3,
-                maxLines = 5
+                minLines = 3
             )
 
             OutlinedTextField(
@@ -105,7 +104,7 @@ fun CreateActividadScreen(
                 singleLine = true
             )
 
-            // Selector de estado
+            // Dropdown de estado
             var expanded by remember { mutableStateOf(false) }
             val estados = listOf("pendiente", "en proceso", "completada", "cancelada")
 
@@ -118,7 +117,7 @@ fun CreateActividadScreen(
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Estado") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .menuAnchor()
@@ -128,11 +127,11 @@ fun CreateActividadScreen(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
-                    estados.forEach { selectionEstado ->
+                    estados.forEach { seleccion ->
                         DropdownMenuItem(
-                            text = { Text(selectionEstado) },
+                            text = { Text(seleccion) },
                             onClick = {
-                                estado = selectionEstado
+                                estado = seleccion
                                 expanded = false
                             }
                         )
@@ -142,42 +141,36 @@ fun CreateActividadScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
+            // Botón de crear
             Button(
                 onClick = {
-                    // CAMBIO 2: LÓGICA DE FECHAS SEGURA
                     val now = LocalDateTime.now()
-                    val end = now.plusHours(1) // La actividad dura 1 hora por defecto
-
-                    // Formato ISO estándar (yyyy-MM-ddTHH:mm:ss)
+                    val end = now.plusHours(1)
                     val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
-
-                    val fechaInicioStr = now.format(formatter)
-                    val fechaFinStr = end.format(formatter)
-
-                    // Validar que el usuario puso el ID
-                    val usuarioFinal = idUsuarioManual.trim()
-
-                    // CAMBIO 3: LOG PARA VERIFICAR ANTES DE ENVIAR
-                    Log.d("DEBUG_APP", "Enviando -> ID: $usuarioFinal, Inicio: $fechaInicioStr, Fin: $fechaFinStr")
 
                     val actividad = ActividadRequest(
                         titulo = titulo,
                         descripcion = descripcion,
-                        tipo = tipo.ifBlank { "General" }, // Evitar vacíos
-                        fechaInicio = fechaInicioStr,
-                        fechaFin = fechaFinStr,
-                        usuarioRef = usuarioFinal,
+                        tipo = tipo.ifBlank { "General" },
+                        fechaInicio = now.format(formatter),
+                        fechaFin = end.format(formatter),
+                        usuarioRef = idUsuarioManual.trim(),
                         estado = estado
                     )
+
+                    Log.d("DEBUG_APP", "Creando actividad → $actividad")
+
                     viewModel.createActividad(actividad)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                // El botón solo se activa si hay Título, Descripción y ID de Usuario
-                enabled = titulo.isNotBlank() && descripcion.isNotBlank() && idUsuarioManual.isNotBlank()
+                enabled = titulo.isNotBlank() &&
+                        descripcion.isNotBlank() &&
+                        idUsuarioManual.isNotBlank()
             ) {
                 Text("Crear Actividad")
             }
 
+            // Estados del viewmodel
             when (createState) {
                 is CreateActividadState.Loading -> {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -185,11 +178,10 @@ fun CreateActividadScreen(
                 is CreateActividadState.Error -> {
                     Text(
                         text = (createState as CreateActividadState.Error).message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
-                else -> {}
+                else -> Unit
             }
         }
     }
