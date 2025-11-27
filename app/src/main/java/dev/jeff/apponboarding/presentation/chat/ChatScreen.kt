@@ -1,6 +1,5 @@
 package dev.jeff.apponboarding.presentation.chat
 
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,6 +8,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -51,12 +52,10 @@ fun ChatScreen(
         }
     }
 
-    // Scroll automático al nuevo mensaje
+    // Auto-scroll al fondo cuando llegan mensajes nuevos
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
-            scope.launch {
-                listState.animateScrollToItem(messages.size - 1)
-            }
+            listState.animateScrollToItem(messages.size - 1)
         }
     }
 
@@ -64,62 +63,32 @@ fun ChatScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        // Avatar del bot
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape),
-                            color = MaterialTheme.colorScheme.primary
+                            modifier = Modifier.size(40.dp).clip(CircleShape),
+                            color = MaterialTheme.colorScheme.primaryContainer
                         ) {
-                            Box(
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.SmartToy,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(24.dp)
-                                )
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.SmartToy, null, tint = MaterialTheme.colorScheme.primary)
                             }
                         }
-
+                        Spacer(Modifier.width(10.dp))
                         Column {
-                            Text(
-                                text = "Asistente Virtual",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = if (sendState is SendMessageState.Loading) "Escribiendo..." else "En línea",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (sendState is SendMessageState.Loading)
-                                    MaterialTheme.colorScheme.primary
-                                else
-                                    Color(0xFF4CAF50)
-                            )
+                            Text("Asistente Virtual", style = MaterialTheme.typography.titleMedium)
+                            Text("En línea", style = MaterialTheme.typography.bodySmall, color = Color.Green)
                         }
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.clearChat() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Limpiar chat")
+                        Icon(Icons.Default.Refresh, "Limpiar")
                     }
-                    IconButton(onClick = { /* TODO: Más opciones */ }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Más opciones")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         }
     ) { padding ->
@@ -127,78 +96,48 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .background(Color(0xFFF5F5F5))
         ) {
-            // Estado de carga de sala
-            when (salaState) {
-                is SalaState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            CircularProgressIndicator()
-                            Text("Conectando al asistente...")
-                        }
-                    }
+
+            // Área de mensajes
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(messages) { message ->
+                    ChatBubble(message, usuario?.nombre ?: "Tú")
                 }
 
-                is SalaState.Error -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Error,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                            Text(
-                                text = (salaState as SalaState.Error).message,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
+                if (sendState is SendMessageState.Loading) {
+                    item { TypingIndicator() }
                 }
+            }
 
-                else -> {
-                    // Lista de mensajes
-                    LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-                        state = listState,
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(messages) { message ->
-                            ChatBubble(
-                                message = message,
-                                userName = usuario?.nombre ?: "Usuario"
-                            )
-                        }
-
-                        // Indicador de escribiendo
-                        if (sendState is SendMessageState.Loading) {
-                            item {
-                                TypingIndicator()
-                            }
-                        }
-                    }
-
-                    // Campo de entrada de mensaje
-                    MessageInput(
+            // Input Area
+            Surface(
+                tonalElevation = 8.dp,
+                color = Color.White
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
                         value = messageText,
                         onValueChange = { messageText = it },
-                        onSend = {
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text("Escribe una duda sobre tu onboarding...") },
+                        shape = RoundedCornerShape(24.dp),
+                        maxLines = 3
+                    )
+                    Spacer(Modifier.width(8.dp))
+
+                    val isSending = sendState is SendMessageState.Loading
+
+                    FilledIconButton(
+                        onClick = {
                             if (messageText.isNotBlank()) {
                                 viewModel.sendMessage(
                                     usuarioRef = usuario?.id?.toString() ?: "",
@@ -207,8 +146,15 @@ fun ChatScreen(
                                 messageText = ""
                             }
                         },
-                        isLoading = sendState is SendMessageState.Loading
-                    )
+                        enabled = messageText.isNotBlank() && !isSending,
+                        modifier = Modifier.size(50.dp)
+                    ) {
+                        if (isSending) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                        } else {
+                            Icon(Icons.AutoMirrored.Filled.Send, "Enviar")
+                        }
+                    }
                 }
             }
         }
@@ -216,97 +162,36 @@ fun ChatScreen(
 }
 
 @Composable
-fun ChatBubble(
-    message: ChatMessage,
-    userName: String
-) {
-    val isFromUser = message.isFromUser
-    val bubbleColor = if (isFromUser) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
-    }
-    val textColor = if (isFromUser) {
-        MaterialTheme.colorScheme.onPrimary
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
+fun ChatBubble(message: ChatMessage, userName: String) {
+    val isMe = message.isFromUser
+    val align = if (isMe) Alignment.End else Alignment.Start
+    val color = if (isMe) MaterialTheme.colorScheme.primary else Color.White
+    val textColor = if (isMe) Color.White else Color.Black
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isFromUser) Arrangement.End else Arrangement.Start
-    ) {
-        if (!isFromUser) {
-            // Avatar del bot
-            Surface(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape),
-                color = MaterialTheme.colorScheme.primary
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.SmartToy,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-            Spacer(Modifier.width(8.dp))
-        }
-
-        Column(
-            modifier = Modifier.widthIn(max = 280.dp),
-            horizontalAlignment = if (isFromUser) Alignment.End else Alignment.Start
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = align) {
+        Surface(
+            color = color,
+            shape = RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = if (isMe) 16.dp else 2.dp,
+                bottomEnd = if (isMe) 2.dp else 16.dp
+            ),
+            shadowElevation = 2.dp,
+            modifier = Modifier.widthIn(max = 280.dp)
         ) {
-            Surface(
-                color = bubbleColor,
-                shape = RoundedCornerShape(
-                    topStart = 16.dp,
-                    topEnd = 16.dp,
-                    bottomStart = if (isFromUser) 16.dp else 4.dp,
-                    bottomEnd = if (isFromUser) 4.dp else 16.dp
-                ),
-                tonalElevation = 1.dp
-            ) {
+            Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     text = message.content,
-                    modifier = Modifier.padding(12.dp),
                     color = textColor,
                     style = MaterialTheme.typography.bodyMedium
                 )
-            }
-
-            // Hora del mensaje
-            Text(
-                text = formatTime(message.timestamp),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-            )
-        }
-
-        if (isFromUser) {
-            Spacer(Modifier.width(8.dp))
-            // Avatar del usuario
-            Surface(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape),
-                color = MaterialTheme.colorScheme.secondary
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = userName.take(1).uppercase(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSecondary
-                    )
-                }
+                Text(
+                    text = formatTime(message.timestamp),
+                    color = textColor.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
+                )
             }
         }
     }
@@ -314,107 +199,20 @@ fun ChatBubble(
 
 @Composable
 fun TypingIndicator() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Start
-    ) {
-        Surface(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape),
-            color = MaterialTheme.colorScheme.primary
-        ) {
-            Box(
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.SmartToy,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-        Spacer(Modifier.width(8.dp))
-
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                repeat(3) {
-                    Surface(
-                        modifier = Modifier.size(8.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    ) {}
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun MessageInput(
-    value: String,
-    onValueChange: (String) -> Unit,
-    onSend: () -> Unit,
-    isLoading: Boolean
-) {
     Surface(
-        tonalElevation = 3.dp
+        color = Color.White,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.padding(8.dp),
+        shadowElevation = 1.dp
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Campo de texto
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Escribe tu mensaje...") },
-                shape = RoundedCornerShape(24.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                maxLines = 4,
-                enabled = !isLoading
-            )
-
-            // Botón de enviar
-            FilledIconButton(
-                onClick = onSend,
-                enabled = value.isNotBlank() && !isLoading,
-                modifier = Modifier.size(48.dp)
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Icon(
-                        Icons.Default.Send,
-                        contentDescription = "Enviar"
-                    )
-                }
-            }
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+            Spacer(Modifier.width(8.dp))
+            Text("Analizando respuesta...", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
 
-private fun formatTime(timestamp: Long): String {
-    val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-    return sdf.format(Date(timestamp))
+private fun formatTime(time: Long): String {
+    return SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(time))
 }

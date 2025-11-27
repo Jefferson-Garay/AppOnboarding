@@ -5,11 +5,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import dev.jeff.apponboarding.data.model.UsuarioModel
-import dev.jeff.apponboarding.data.repository.ActividadRepository
-import dev.jeff.apponboarding.data.repository.ChatRepository
-import dev.jeff.apponboarding.data.repository.RecursoRepository
-import dev.jeff.apponboarding.data.repository.RolRepository
-import dev.jeff.apponboarding.data.repository.UsuarioRepository
+import dev.jeff.apponboarding.data.repository.*
 import dev.jeff.apponboarding.presentation.actividad.*
 import dev.jeff.apponboarding.presentation.auth.LoginScreen
 import dev.jeff.apponboarding.presentation.auth.LoginState
@@ -17,6 +13,7 @@ import dev.jeff.apponboarding.presentation.auth.LoginViewModel
 import dev.jeff.apponboarding.presentation.ayuda.AyudaScreen
 import dev.jeff.apponboarding.presentation.chat.*
 import dev.jeff.apponboarding.presentation.home.HomeScreen
+import dev.jeff.apponboarding.presentation.mensaje.ProgramarMensajesScreen
 import dev.jeff.apponboarding.presentation.recurso.*
 import dev.jeff.apponboarding.presentation.rol.*
 import dev.jeff.apponboarding.presentation.supervisor.MiSupervisorScreen
@@ -32,10 +29,7 @@ fun AppNavGraph() {
     val rolViewModel = remember { RolViewModel(RolRepository()) }
     val chatViewModel = remember { ChatViewModel(ChatRepository()) }
 
-    // Estado del usuario actual
     var currentUser by remember { mutableStateOf<UsuarioModel?>(null) }
-
-    // Observar estado de login
     val loginState by loginViewModel.loginState.collectAsState()
 
     LaunchedEffect(loginState) {
@@ -46,7 +40,6 @@ fun AppNavGraph() {
 
     NavHost(navController = navController, startDestination = "login") {
 
-        // Pantalla de Login
         composable("login") {
             LoginScreen(
                 viewModel = loginViewModel,
@@ -58,29 +51,17 @@ fun AppNavGraph() {
             )
         }
 
-        // Pantalla de Home
         composable("home") {
             HomeScreen(
                 usuario = currentUser,
                 actividadViewModel = actividadViewModel,
-                onNavigateToActividades = {
-                    navController.navigate("actividades")
-                },
-                onNavigateToRecursos = {
-                    navController.navigate("recursos")
-                },
-                onNavigateToRoles = {
-                    navController.navigate("roles")
-                },
-                onNavigateToChat = {
-                    navController.navigate("chat")
-                },
-                onNavigateToSupervisor = {
-                    navController.navigate("supervisor")
-                },
-                onNavigateToAyuda = {
-                    navController.navigate("ayuda")
-                },
+                onNavigateToActividades = { navController.navigate("actividades") },
+                onNavigateToRecursos = { navController.navigate("recursos") },
+                onNavigateToRoles = { navController.navigate("roles") },
+                onNavigateToChat = { navController.navigate("chat") },
+                onNavigateToSupervisor = { navController.navigate("supervisor") },
+                onNavigateToAyuda = { navController.navigate("ayuda") },
+                onNavigateToMensajes = { navController.navigate("mensajes") }, // US 10
                 onNavigateToActividadDetail = { actividadId ->
                     navController.navigate("actividades/detail/$actividadId")
                 },
@@ -93,63 +74,45 @@ fun AppNavGraph() {
             )
         }
 
-        // === RUTA DE MI SUPERVISOR ===
+        // RUTA NUEVA US 10
+        composable("mensajes") {
+            ProgramarMensajesScreen(
+                usuarioRef = currentUser?.id?.toString() ?: "",
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
 
         composable("supervisor") {
             MiSupervisorScreen(
                 usuarioActual = currentUser,
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
-
-        // === RUTA DE AYUDA ===
 
         composable("ayuda") {
             AyudaScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
-                onNavigateToSupervisor = {
-                    navController.navigate("supervisor")
-                },
-                onNavigateToActividades = {
-                    navController.navigate("actividades")
-                },
-                onNavigateToRecursos = {
-                    navController.navigate("recursos")
-                },
-                onNavigateToChat = {
-                    navController.navigate("chat")
-                }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSupervisor = { navController.navigate("supervisor") },
+                onNavigateToActividades = { navController.navigate("actividades") },
+                onNavigateToRecursos = { navController.navigate("recursos") },
+                onNavigateToChat = { navController.navigate("chat") }
             )
         }
-
-        // === RUTA DE CHAT ===
 
         composable("chat") {
             ChatScreen(
                 viewModel = chatViewModel,
                 usuario = currentUser,
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
-
-        // === RUTAS DE ACTIVIDADES ===
 
         composable("actividades") {
             ActividadesListScreen(
                 viewModel = actividadViewModel,
                 usuarioRef = currentUser?.id?.toString() ?: "",
-                onNavigateToCreate = {
-                    navController.navigate("actividades/create")
-                },
-                onNavigateToDetail = { actividadId ->
-                    navController.navigate("actividades/detail/$actividadId")
-                }
+                onNavigateToCreate = { navController.navigate("actividades/create") },
+                onNavigateToDetail = { id -> navController.navigate("actividades/detail/$id") }
             )
         }
 
@@ -157,9 +120,7 @@ fun AppNavGraph() {
             CreateActividadScreen(
                 viewModel = actividadViewModel,
                 usuarioRef = currentUser?.id?.toString() ?: "",
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -170,26 +131,16 @@ fun AppNavGraph() {
             val actividadId = backStackEntry.arguments?.getString("actividadId") ?: ""
             ActividadDetailScreen(
                 actividadId = actividadId,
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
-                onNavigateToEdit = { id ->
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEdit = { navController.popBackStack() }
             )
         }
-
-        // === RUTAS DE RECURSOS ===
 
         composable("recursos") {
             RecursosListScreen(
                 viewModel = recursoViewModel,
-                onNavigateToCreate = {
-                    navController.navigate("recursos/create")
-                },
-                onNavigateToDetail = { recursoId ->
-                    navController.navigate("recursos/detail/$recursoId")
-                }
+                onNavigateToCreate = { navController.navigate("recursos/create") },
+                onNavigateToDetail = { id -> navController.navigate("recursos/detail/$id") }
             )
         }
 
@@ -197,9 +148,7 @@ fun AppNavGraph() {
             CreateRecursoScreen(
                 viewModel = recursoViewModel,
                 adminRef = currentUser?.id?.toString() ?: "",
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -210,32 +159,22 @@ fun AppNavGraph() {
             val recursoId = backStackEntry.arguments?.getString("recursoId") ?: ""
             RecursoDetailScreen(
                 recursoId = recursoId,
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
-
-        // === RUTAS DE ROLES ===
 
         composable("roles") {
             RolesListScreen(
                 viewModel = rolViewModel,
-                onNavigateToCreate = {
-                    navController.navigate("roles/create")
-                },
-                onNavigateToDetail = { rolId ->
-                    navController.navigate("roles/detail/$rolId")
-                }
+                onNavigateToCreate = { navController.navigate("roles/create") },
+                onNavigateToDetail = { id -> navController.navigate("roles/detail/$id") }
             )
         }
 
         composable("roles/create") {
             CreateRolScreen(
                 viewModel = rolViewModel,
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -246,12 +185,8 @@ fun AppNavGraph() {
             val rolId = backStackEntry.arguments?.getString("rolId") ?: ""
             RolDetailScreen(
                 rolId = rolId,
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
-                onNavigateToEdit = { id ->
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEdit = { navController.popBackStack() }
             )
         }
     }
