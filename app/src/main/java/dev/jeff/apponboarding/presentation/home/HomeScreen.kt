@@ -60,6 +60,7 @@ fun HomeScreen(
     onNavigateToAyuda: () -> Unit,
     onNavigateToMensajes: () -> Unit,
     onNavigateToUsuarios: () -> Unit,
+    onNavigateToConfiguracion: () -> Unit,
     onNavigateToActividadDetail: (String) -> Unit,
     onLogout: () -> Unit
 ) {
@@ -171,6 +172,7 @@ fun HomeScreen(
                                     "roles" -> onNavigateToRoles()
                                     "usuarios" -> onNavigateToUsuarios()
                                     "ayuda" -> onNavigateToAyuda()
+                                    "configuracion" -> onNavigateToConfiguracion()
                                 }
                             },
                             colors = NavigationDrawerItemDefaults.colors(
@@ -387,6 +389,39 @@ fun QuickAccessCard(modifier: Modifier = Modifier, icon: ImageVector, title: Str
             Icon(imageVector = icon, contentDescription = title, modifier = Modifier.size(32.dp), tint = ColorIconoAccesos)
             Spacer(Modifier.height(8.dp))
             Text(text = title, style = MaterialTheme.typography.labelMedium, color = Color.Black)
+        }
+    }
+}
+
+@Composable
+fun MensajePopup(
+    mensaje: String,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = mensaje,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            IconButton(onClick = onDismiss) {
+                Icon(Icons.Default.Close, contentDescription = "Cerrar")
+            }
         }
     }
 }

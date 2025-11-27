@@ -20,6 +20,7 @@ import dev.jeff.apponboarding.presentation.supervisor.MiSupervisorScreen
 import dev.jeff.apponboarding.presentation.usuario.UsuarioDetailScreen
 import dev.jeff.apponboarding.presentation.usuario.UsuarioViewModel
 import dev.jeff.apponboarding.presentation.usuario.UsuariosListScreen
+import dev.jeff.apponboarding.presentation.configuracion.ConfiguracionScreen
 
 @Composable
 fun AppNavGraph() {
@@ -33,6 +34,10 @@ fun AppNavGraph() {
     val usuarioViewModel = remember { UsuarioViewModel() }
 
     var currentUser by remember { mutableStateOf<UsuarioModel?>(null) }
+
+    // Estado del tema oscuro
+    var isDarkTheme by remember { mutableStateOf(false) }
+
     val loginState by loginViewModel.loginState.collectAsState()
 
     LaunchedEffect(loginState) {
@@ -65,6 +70,7 @@ fun AppNavGraph() {
                 onNavigateToSupervisor = { navController.navigate("supervisor") },
                 onNavigateToAyuda = { navController.navigate("ayuda") },
                 onNavigateToMensajes = { navController.navigate("mensajes") },
+                onNavigateToConfiguracion = { navController.navigate("configuracion") },
                 onNavigateToUsuarios = { navController.navigate("usuarios") },
                 onNavigateToActividadDetail = { actividadId ->
                     navController.navigate("actividades/detail/$actividadId")
@@ -74,6 +80,19 @@ fun AppNavGraph() {
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
                     }
+                }
+            )
+        }
+
+        // === RUTA DE CONFIGURACIÓN ===
+
+        composable("configuracion") {
+            ConfiguracionScreen(
+                usuario = currentUser,
+                isDarkTheme = isDarkTheme,
+                onToggleDarkTheme = { isDarkTheme = it },
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }
