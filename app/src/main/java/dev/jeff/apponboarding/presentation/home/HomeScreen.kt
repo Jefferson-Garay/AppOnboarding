@@ -30,18 +30,20 @@ data class DrawerMenuItem(
 @Composable
 fun HomeScreen(
     usuario: UsuarioModel?,
+    isDarkTheme: Boolean,
+    onToggleTheme: () -> Unit,
     onNavigateToActividades: () -> Unit,
     onNavigateToRecursos: () -> Unit,
     onNavigateToRoles: () -> Unit,
     onNavigateToChat: () -> Unit,
     onNavigateToHistory: () -> Unit,
+    onNavigateToConfiguracion: () -> Unit,
     onLogout: () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var selectedItem by remember { mutableStateOf("inicio") }
-    var isDarkTheme by remember { mutableStateOf(false) }
-
+    
     // Para pruebas: asumimos que todos son admin por ahora
     val isAdmin = true // usuario?.rolRef != null 
 
@@ -52,7 +54,7 @@ fun HomeScreen(
         DrawerMenuItem("actividades", "Mis Actividades", Icons.Outlined.Assignment, Icons.Filled.Assignment),
         DrawerMenuItem("recursos", "Recursos", Icons.Outlined.Folder, Icons.Filled.Folder),
         DrawerMenuItem("perfil", "Mi Información", Icons.Outlined.Person, Icons.Filled.Person),
-        DrawerMenuItem("ayuda", "Ayuda", Icons.Outlined.Help, Icons.Filled.Help),
+        // Se elimina "Ayuda"
         DrawerMenuItem("configuracion", "Configuración", Icons.Outlined.Settings, Icons.Filled.Settings)
     )
 
@@ -66,7 +68,7 @@ fun HomeScreen(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                drawerContainerColor = Color(0xFF1A237E) // Azul oscuro
+                drawerContainerColor = MaterialTheme.colorScheme.primaryContainer // Adaptable al tema
             ) {
                 // Header del Drawer
                 DrawerHeader(
@@ -93,6 +95,7 @@ fun HomeScreen(
                                 "recursos" -> onNavigateToRecursos()
                                 "roles" -> onNavigateToRoles()
                                 "history" -> onNavigateToHistory()
+                                "configuracion" -> onNavigateToConfiguracion()
                             }
                         }
                     )
@@ -188,7 +191,7 @@ fun HomeScreen(
 
                         // Cambiar tema claro/oscuro
                         IconButton(
-                            onClick = { isDarkTheme = !isDarkTheme }
+                            onClick = onToggleTheme
                         ) {
                             Icon(
                                 if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
@@ -429,13 +432,13 @@ fun DrawerHeader(
                 Icon(
                     Icons.Default.Close,
                     contentDescription = "Cerrar menú",
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer // Adaptable
                 )
             }
             Text(
                 text = "Cerrar menú",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Spacer(Modifier.weight(1f))
         }
@@ -449,14 +452,15 @@ fun DrawerItem(
     onClick: () -> Unit,
     isLogout: Boolean = false
 ) {
+    // Colores adaptables al tema
     val backgroundColor = when {
-        isSelected -> Color.White.copy(alpha = 0.2f)
+        isSelected -> MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)
         else -> Color.Transparent
     }
 
     val contentColor = when {
-        isLogout -> Color(0xFFEF5350) // Rojo para logout
-        else -> Color.White
+        isLogout -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onPrimaryContainer
     }
 
     Surface(

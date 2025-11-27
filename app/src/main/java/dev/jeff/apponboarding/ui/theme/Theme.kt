@@ -9,8 +9,11 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
 // Esquema de colores oscuros adaptado a la identidad corporativa
 private val DarkColorScheme = darkColorScheme(
@@ -56,6 +59,17 @@ fun AppOnboardingTheme(
         }
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
+    }
+
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            // Si está en tema oscuro, la barra de estado es transparente o oscura
+            // Aquí le decimos al sistema si usar iconos claros u oscuros
+            // (isAppearanceLightStatusBars = !darkTheme) -> Si es oscuro, false (iconos claros)
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+        }
     }
 
     MaterialTheme(

@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,8 +20,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dev.jeff.apponboarding.data.model.ConversationHistoryItem
+import dev.jeff.apponboarding.data.model.SalaHistoryItem
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -39,31 +41,14 @@ fun HistoryScreen(
 
     val context = LocalContext.current
 
-    // Para pruebas, ignoramos la validación de admin
-    /*
-    if (!isAdmin) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Default.Lock, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(48.dp))
-                Spacer(Modifier.height(16.dp))
-                Text("Acceso solo para administradores", style = MaterialTheme.typography.headlineSmall)
-                Button(onClick = onNavigateBack, modifier = Modifier.padding(top = 16.dp)) {
-                    Text("Volver")
-                }
-            }
-        }
-        return
-    }
-    */
-
     Scaffold(
-        containerColor = Color(0xFFF5F7FA), // Fondo muy claro institucional
+        containerColor = MaterialTheme.colorScheme.background, // Adaptable al tema
         topBar = {
             Surface(shadowElevation = 4.dp) {
                 TopAppBar(
                     title = {
                         Text(
-                            "Historial de Conversaciones",
+                            "Historial de Salas",
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -73,7 +58,9 @@ fun HistoryScreen(
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
             }
         }
@@ -116,7 +103,9 @@ fun HistoryScreen(
             // --- Filtros Avanzados ---
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
                 elevation = CardDefaults.cardElevation(2.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -124,17 +113,22 @@ fun HistoryScreen(
                     Text(
                         "Filtros de Búsqueda",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.height(12.dp))
 
                     OutlinedTextField(
                         value = filterUsuario,
                         onValueChange = { viewModel.updateUsuarioFilter(it) },
-                        label = { Text("Buscar por usuario ID/Nombre") },
+                        label = { Text("Buscar por usuario ID") },
                         modifier = Modifier.fillMaxWidth(),
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                        singleLine = true
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        )
                     )
 
                     Spacer(Modifier.height(12.dp))
@@ -183,7 +177,7 @@ fun HistoryScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // --- Lista de Resultados ---
+            // --- Lista de Salas ---
             when (historyState) {
                 is HistoryState.Loading -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -193,24 +187,28 @@ fun HistoryScreen(
                 is HistoryState.Empty -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.SearchOff, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(48.dp))
-                            Text("No se encontraron conversaciones con estos filtros", color = Color.Gray)
+                            Icon(Icons.Default.SearchOff, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(48.dp))
+                            Text("No se encontraron salas de chat", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
                 is HistoryState.Success -> {
-                    val items = (historyState as HistoryState.Success).items
+                    val salas = (historyState as HistoryState.Success).items
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(items) { item ->
-                            HistoryItemCard(item)
+                        items(salas) { sala ->
+                            SalaHistoryCard(sala)
                         }
                     }
                 }
                 is HistoryState.Error -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Error al cargar historial", color = MaterialTheme.colorScheme.error)
+                        Text(
+                            text = (historyState as HistoryState.Error).message,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(16.dp)
+                        )
                     }
                 }
                 else -> {}
@@ -223,7 +221,9 @@ fun HistoryScreen(
 fun StatCard(title: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
         elevation = CardDefaults.cardElevation(2.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -235,71 +235,96 @@ fun StatCard(title: String, value: String, icon: ImageVector, modifier: Modifier
         ) {
             Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
             Spacer(Modifier.height(8.dp))
-            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text(title, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text(title, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
-fun HistoryItemCard(item: ConversationHistoryItem) {
+fun SalaHistoryCard(sala: SalaHistoryItem) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(8.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE))
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { /* TODO: Navegar al detalle de la sala */ },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Avatar
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer
             ) {
-                Text(
-                    text = item.fecha, // Asume formato string legible
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.Gray
-                )
-                if (item.recursosCompartidos != null && item.recursosCompartidos > 0) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text(
-                            text = "${item.recursosCompartidos} recursos",
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = sala.usuarioNombre.take(1).uppercase(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 }
             }
-            Spacer(Modifier.height(8.dp))
+
+            Spacer(Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = sala.usuarioNombre,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = sala.ultimaFecha, // Mostrar fecha formateada si es posible
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                Spacer(Modifier.height(4.dp))
+                
+                Text(
+                    text = sala.ultimoMensaje,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                Spacer(Modifier.height(4.dp))
+                
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text(
+                        text = "${sala.totalMensajes} mensajes",
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
             
-            // Usuario
-            Row(verticalAlignment = Alignment.Top) {
-                Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Gray)
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = item.mensajeUsuario,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider(color = Color(0xFFF0F0F0))
-            Spacer(Modifier.height(8.dp))
-
-            // Chatbot
-            Row(verticalAlignment = Alignment.Top) {
-                Icon(Icons.Default.SmartToy, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = item.respuestaChatbot,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.DarkGray
-                )
-            }
+            Icon(
+                Icons.Default.ArrowForward,
+                contentDescription = "Ver detalle",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -325,7 +350,6 @@ fun DateSelectorField(
         calendar.get(Calendar.DAY_OF_MONTH)
     )
 
-    // Box para manejar el click, ya que OutlinedTextField deshabilitado no captura clicks bien
     Box(modifier = modifier) {
         OutlinedTextField(
             value = selectedDate?.let { formatDate(it) } ?: "",
@@ -346,7 +370,6 @@ fun DateSelectorField(
                 disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         )
-        // Overlay transparente clickeable que cubre el TextField
         Box(
             modifier = Modifier
                 .matchParentSize()
@@ -361,6 +384,5 @@ private fun formatDate(millis: Long): String {
 }
 
 private fun formatDateShort(dateString: String?): String? {
-    // Ajustar según formato de fecha que venga del backend si es necesario
     return dateString
 }

@@ -1,9 +1,12 @@
 package dev.jeff.apponboarding.data.model
 
+import com.google.gson.annotations.SerializedName
+
 data class UsuarioModel(
     val id: Any?,
     val nombre: String,
     val correo: String,
+    @SerializedName("password")
     val passwordHash: String,
     val area: String?,
     val rolRef: String?,

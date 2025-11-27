@@ -15,7 +15,10 @@ import dev.jeff.apponboarding.presentation.actividad.*
 import dev.jeff.apponboarding.presentation.auth.LoginScreen
 import dev.jeff.apponboarding.presentation.auth.LoginState
 import dev.jeff.apponboarding.presentation.auth.LoginViewModel
+import dev.jeff.apponboarding.presentation.ayuda.AyudaScreen
 import dev.jeff.apponboarding.presentation.chat.*
+import dev.jeff.apponboarding.presentation.configuracion.ConfiguracionScreen
+import dev.jeff.apponboarding.presentation.configuracion.ConfiguracionViewModel
 import dev.jeff.apponboarding.presentation.history.HistoryScreen
 import dev.jeff.apponboarding.presentation.history.HistoryViewModel
 import dev.jeff.apponboarding.presentation.home.HomeScreen
@@ -23,7 +26,12 @@ import dev.jeff.apponboarding.presentation.recurso.*
 import dev.jeff.apponboarding.presentation.rol.*
 
 @Composable
-fun AppNavGraph() {
+fun AppNavGraph(
+    isDarkTheme: Boolean = false,
+    onToggleTheme: () -> Unit = {},
+    areNotificationsEnabled: Boolean = true,
+    onToggleNotifications: () -> Unit = {}
+) {
     val navController = rememberNavController()
 
     // ViewModels
@@ -33,8 +41,10 @@ fun AppNavGraph() {
     val rolViewModel = remember { RolViewModel(RolRepository()) }
     val chatViewModel = remember { ChatViewModel(ChatRepository()) }
     val historyViewModel = remember { HistoryViewModel(HistoryRepository()) }
+    val configuracionViewModel = remember { ConfiguracionViewModel(UsuarioRepository()) }
 
     // Estado del usuario actual
+    // Se inicia en null para que obligue a pasar por login
     var currentUser by remember { mutableStateOf<UsuarioModel?>(null) }
 
     // Observar estado de login
@@ -43,9 +53,23 @@ fun AppNavGraph() {
     LaunchedEffect(loginState) {
         if (loginState is LoginState.Success) {
             currentUser = (loginState as LoginState.Success).user as? UsuarioModel
+            // Navegar a home cuando el login es exitoso
+            navController.navigate("home") {
+                popUpTo("login") { inclusive = true }
+            }
         }
     }
 
+    // Función auxiliar para formatear el ID de manera segura
+    fun formatId(id: Any?): String {
+        return when (id) {
+            is Double -> id.toLong().toString() // Convierte 15.0 a "15"
+            is Float -> id.toLong().toString()
+            else -> id?.toString() ?: ""
+        }
+    }
+
+    // CAMBIO: startDestination restaurado a "login" para forzar autenticación
     NavHost(navController = navController, startDestination = "login") {
 
         // Pantalla de Login
@@ -53,9 +77,7 @@ fun AppNavGraph() {
             LoginScreen(
                 viewModel = loginViewModel,
                 onLoginSuccess = {
-                    navController.navigate("home") {
-                        popUpTo("login") { inclusive = true }
-                    }
+                    // La navegación ahora se maneja en el LaunchedEffect al observar el estado
                 }
             )
         }
@@ -64,6 +86,8 @@ fun AppNavGraph() {
         composable("home") {
             HomeScreen(
                 usuario = currentUser,
+                isDarkTheme = isDarkTheme,
+                onToggleTheme = onToggleTheme,
                 onNavigateToActividades = {
                     navController.navigate("actividades")
                 },
@@ -79,6 +103,9 @@ fun AppNavGraph() {
                 onNavigateToHistory = {
                     navController.navigate("history")
                 },
+                onNavigateToConfiguracion = {
+                    navController.navigate("configuracion")
+                },
                 onLogout = {
                     currentUser = null
                     navController.navigate("login") {
@@ -87,6 +114,31 @@ fun AppNavGraph() {
                 }
             )
         }
+        
+        // === AYUDA ELIMINADA ===
+        /*
+        composable("ayuda") {
+            AyudaScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        */
+
+        composable("configuracion") {
+            // Usamos formatId para asegurar que enviamos "15" y no "15.0"
+            val safeId = formatId(currentUser?.id)
+            
+            ConfiguracionScreen(
+                viewModel = configuracionViewModel,
+                usuarioId = safeId,
+                isDarkTheme = isDarkTheme,
+                onToggleTheme = onToggleTheme,
+                areNotificationsEnabled = areNotificationsEnabled,
+                onToggleNotifications = onToggleNotifications,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
 
         // === RUTA DE CHAT ===
 
