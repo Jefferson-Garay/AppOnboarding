@@ -12,31 +12,57 @@ import dev.jeff.apponboarding.presentation.auth.LoginState
 import dev.jeff.apponboarding.presentation.auth.LoginViewModel
 import dev.jeff.apponboarding.presentation.ayuda.AyudaScreen
 import dev.jeff.apponboarding.presentation.chat.*
+import dev.jeff.apponboarding.presentation.configuracion.ConfiguracionScreen
+// Archivo: AppNavGraph.kt
+
+// ...
 import dev.jeff.apponboarding.presentation.home.HomeScreen
 import dev.jeff.apponboarding.presentation.mensaje.ProgramarMensajesScreen
+import dev.jeff.apponboarding.presentation.perfil.MiInformacionScreen
 import dev.jeff.apponboarding.presentation.recurso.*
 import dev.jeff.apponboarding.presentation.rol.*
 import dev.jeff.apponboarding.presentation.supervisor.MiSupervisorScreen
 import dev.jeff.apponboarding.presentation.usuario.UsuarioDetailScreen
 import dev.jeff.apponboarding.presentation.usuario.UsuarioViewModel
 import dev.jeff.apponboarding.presentation.usuario.UsuariosListScreen
-import dev.jeff.apponboarding.presentation.configuracion.ConfiguracionScreen
-import dev.jeff.apponboarding.presentation.perfil.MiInformacionScreen
+import dev.jeff.apponboarding.data.remote.actividad.ActividadService
+import dev.jeff.apponboarding.data.remote.RetrofitInstance // Asumiendo que existe
+import dev.jeff.apponboarding.presentation.dashboard.DashboardScreen
+import dev.jeff.apponboarding.presentation.dashboard.DashboardViewModel
+
+// IMPLEMENTACIÓN CRUCIAL: Retorna la instancia del servicio API
+fun provideActividadService(): ActividadService {
+    return RetrofitInstance.actividadApi
+}
+
 
 @Composable
 fun AppNavGraph() {
     val navController = rememberNavController()
 
-    val loginViewModel = remember { LoginViewModel(UsuarioRepository()) }
-    val actividadViewModel = remember { ActividadViewModel(ActividadRepository()) }
-    val recursoViewModel = remember { RecursoViewModel(RecursoRepository()) }
-    val rolViewModel = remember { RolViewModel(RolRepository()) }
-    val chatViewModel = remember { ChatViewModel(ChatRepository()) }
+    // --- INSTANCIAS DE SERVICIO ---
+    val actividadService = remember { provideActividadService() }
+
+    // --- INSTANCIAS DE REPOSITORIOS (Corregido para constructores vacíos) ---
+    val usuarioRepository = remember { UsuarioRepository() } // Usado para login, getUsuarios
+    val actividadRepository = remember { ActividadRepository() } // No tiene constructor
+    val recursoRepository = remember { RecursoRepository() }
+    val rolRepository = remember { RolRepository() }
+    val chatRepository = remember { ChatRepository() }
+
+    // [1] INICIALIZACIÓN DEL DASHBOARD (CORREGIDA): Pasa el servicio de API Y el Repositorio de Usuarios
+    val dashboardRepository = remember { DashboardRepository(actividadService, usuarioRepository) }
+
+    // --- INSTANCIAS DE VIEWMODEL ---
+    val loginViewModel = remember { LoginViewModel(usuarioRepository) }
+    val actividadViewModel = remember { ActividadViewModel(actividadRepository) }
+    val recursoViewModel = remember { RecursoViewModel(recursoRepository) }
+    val rolViewModel = remember { RolViewModel(rolRepository) }
+    val chatViewModel = remember { ChatViewModel(chatRepository) }
     val usuarioViewModel = remember { UsuarioViewModel() }
+    val dashboardViewModel = remember { DashboardViewModel(dashboardRepository) } // Usa el repo corregido
 
     var currentUser by remember { mutableStateOf<UsuarioModel?>(null) }
-
-    // Estado del tema oscuro
     var isDarkTheme by remember { mutableStateOf(false) }
 
     val loginState by loginViewModel.loginState.collectAsState()
@@ -64,6 +90,8 @@ fun AppNavGraph() {
             HomeScreen(
                 usuario = currentUser,
                 actividadViewModel = actividadViewModel,
+                // [2] NAVEGACIÓN A DASHBOARD
+                onNavigateToDashboard = { navController.navigate("dashboard") },
                 onNavigateToActividades = { navController.navigate("actividades") },
                 onNavigateToRecursos = { navController.navigate("recursos") },
                 onNavigateToRoles = { navController.navigate("roles") },
@@ -83,6 +111,14 @@ fun AppNavGraph() {
                         popUpTo("home") { inclusive = true }
                     }
                 }
+            )
+        }
+
+        // [3] RUTA DEL DASHBOARD
+        composable("dashboard") {
+            DashboardScreen(
+                viewModel = dashboardViewModel,
+                onBack = { navController.popBackStack() }
             )
         }
 

@@ -52,6 +52,8 @@ data class DrawerMenuItem(
 fun HomeScreen(
     usuario: UsuarioModel?,
     actividadViewModel: ActividadViewModel,
+    // [1] AÑADIDO: Parámetro de navegación a Dashboard
+    onNavigateToDashboard: () -> Unit,
     onNavigateToActividades: () -> Unit,
     onNavigateToRecursos: () -> Unit,
     onNavigateToRoles: () -> Unit,
@@ -97,14 +99,17 @@ fun HomeScreen(
         progresoFloat < 1f -> Pair("Estás muy cerca, ¡continúa!", "Avanzado")
         else -> Pair("¡Todo listo! Excelente trabajo.", "Finalizado")
     }
-    val textoEtapa = if (!usuario?.nivelOnboarding?.etapa.isNullOrBlank() && usuario?.nivelOnboarding?.etapa != "N/A") {
-        usuario!!.nivelOnboarding!!.etapa
+    // NOTA: Se corrige el uso de !! para evitar posibles crashes, usando Elvis operator (?:)
+    val textoEtapa = if (!usuario?.nivelOnboarding?.etapa.isNullOrBlank() && usuario.nivelOnboarding?.etapa != "N/A") {
+        usuario.nivelOnboarding?.etapa ?: etapaDinamica
     } else {
         etapaDinamica
     }
 
     val menuItems = listOf(
         DrawerMenuItem("inicio", "Inicio", Icons.Outlined.Home, Icons.Filled.Home),
+        // [2] AÑADIDO: Ítem del Dashboard en el menú
+        DrawerMenuItem("dashboard", "Dashboard", Icons.Outlined.BarChart, Icons.Filled.BarChart),
         DrawerMenuItem("chat", "Asistente Virtual", Icons.Outlined.Chat, Icons.Filled.Chat),
         DrawerMenuItem("mensajes", "Automatización", Icons.Outlined.ScheduleSend, Icons.Filled.ScheduleSend),
         DrawerMenuItem("supervisor", "Mi Supervisor", Icons.Outlined.SupervisorAccount, Icons.Filled.SupervisorAccount),
@@ -120,6 +125,7 @@ fun HomeScreen(
     ModalNavigationDrawer(
         drawerState = notificacionesDrawerState,
         drawerContent = {
+            // NOTA: Se asume que el tipo de notificacionesList es List<ActividadModel> o que NotificacionesDrawer fue adaptado
             NotificacionesDrawer(
                 actividades = notificacionesList,
                 isLoading = actividadesState is ActividadesState.Loading,
@@ -165,6 +171,9 @@ fun HomeScreen(
                                 selectedItem = item.id
                                 scope.launch { drawerState.close() }
                                 when (item.id) {
+                                    "inicio" -> { /* Ya estamos aquí */ }
+                                    // [3] AÑADIDO: Lógica de navegación a Dashboard
+                                    "dashboard" -> onNavigateToDashboard()
                                     "chat" -> onNavigateToChat()
                                     "mensajes" -> onNavigateToMensajes()
                                     "supervisor" -> onNavigateToSupervisor()

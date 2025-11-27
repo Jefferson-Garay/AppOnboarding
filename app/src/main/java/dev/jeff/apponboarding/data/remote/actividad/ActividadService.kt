@@ -3,6 +3,8 @@ package dev.jeff.apponboarding.data.remote.actividad
 import dev.jeff.apponboarding.data.model.ActividadCountResponse
 import dev.jeff.apponboarding.data.model.ActividadModel
 import dev.jeff.apponboarding.data.model.ActividadRequest
+import dev.jeff.apponboarding.data.model.ResumenGlobalResponse
+import dev.jeff.apponboarding.data.model.ResumenUsuarioResponse
 import retrofit2.http.*
 
 interface ActividadService {
@@ -49,4 +51,9 @@ interface ActividadService {
 
     @GET("Actividad/count/{usuarioRef}")
     suspend fun getActividadesCount(@Path("usuarioRef") usuarioRef: String): ActividadCountResponse
+    @GET("Actividad/resumen-global")
+    suspend fun getResumenGlobal(): ResumenGlobalResponse // <-- ESTA LÍNEA DEBE EXISTIR
+
+    @GET("Actividad/resumen/{usuarioRef}")
+    suspend fun getResumenUsuario(@Path("usuarioRef") usuarioRef: String): ResumenUsuarioResponse // <-- ESTA LÍNEA DEBE EXISTIR
 }
