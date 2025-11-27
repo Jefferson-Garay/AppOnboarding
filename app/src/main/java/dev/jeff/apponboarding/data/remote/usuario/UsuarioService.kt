@@ -1,9 +1,8 @@
 package dev.jeff.apponboarding.data.remote.usuario
 
 import dev.jeff.apponboarding.data.model.UsuarioModel
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.POST
+import dev.jeff.apponboarding.data.model.UsuarioRequest
+import retrofit2.http.*
 
 data class LoginRequest(
     val correo: String,
@@ -23,6 +22,20 @@ interface UsuarioService {
     @GET("Usuario")
     suspend fun getUsuarios(): List<UsuarioModel>
 
+    // --- MÉTODOS US-17 ---
+
     @POST("Usuario")
-    suspend fun createUsuario(@Body usuario: Map<String, Any>): Map<String, String>
+    suspend fun createUsuario(@Body usuario: UsuarioRequest): Map<String, String>
+
+    @GET("Usuario/{id}")
+    suspend fun getUsuarioById(@Path("id") id: String): UsuarioModel
+
+    @PUT("Usuario/{id}")
+    suspend fun updateUsuario(
+        @Path("id") id: String,
+        @Body usuario: UsuarioRequest
+    ): Map<String, String>
+
+    @DELETE("Usuario/{id}")
+    suspend fun deleteUsuario(@Path("id") id: String): Map<String, String>
 }
