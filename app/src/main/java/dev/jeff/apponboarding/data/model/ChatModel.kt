@@ -2,68 +2,71 @@ package dev.jeff.apponboarding.data.model
 
 // ===== MODELOS DE SALA CHAT =====
 
-data class SalaChatModel(  // Modelo para representar una sala de chat del usuario
+data class SalaChatModel(
     val id: String?,
     val usuarioRef: String,
     val nombre: String,
     val correo: String,
-    val area: String,
-    val rolRef: String,
+    val area: String?,          // Nullable para flexibilidad
+    val rolRef: String?,        // Nullable para flexibilidad
     val nivelOnboarding: NivelOnboardingSala?,
     val estadoOnboardingIA: EstadoOnboardingIA?,
     val contextoPersistente: String?,
-    val ultimoMensaje: String?,     // Último mensaje enviado en la sala
-    val ultimaActualizacion: String?        // Fecha y hora de la última actualización
+    val ultimoMensaje: String?,
+    val ultimaActualizacion: String?
 )
 
-data class NivelOnboardingSala(  //  Nivel de progreso del empleado
+data class NivelOnboardingSala(
     val etapa: String,
     val porcentaje: Int,
     val ultimaActualizacion: String,
     val estado: String
 )
 
-data class EstadoOnboardingIA(   //  Lo que la IA sabe del usuario
+data class EstadoOnboardingIA(
     val pasoActual: String,
     val haVistoDocumentos: Boolean,
     val haConsultadoSupervisor: Boolean,
     val haSolicitadoAdmin: Boolean
 )
 
-data class SalaChatRequest(  // Modelo para crear una nueva sala de chat
+// Request para crear sala
+data class SalaChatRequest(
     val usuarioRef: String,
     val nombre: String,
     val correo: String,
-    val area: String,
-    val rolRef: String
+    val area: String?,          // Nullable
+    val rolRef: String?         // Nullable
 )
 
-data class SalaEstadoRequest(   // Modelo para actualizar el estado de una sala de chat
-    val nivelOnboarding: NivelOnboardingSala,
-    val estadoOnboardingIA: EstadoOnboardingIA,
-    val ultimoMensaje: String
+// Request para actualizar estado
+data class SalaEstadoRequest(
+    val nivelOnboarding: NivelOnboardingSala?,
+    val estadoOnboardingIA: EstadoOnboardingIA?,
+    val ultimoMensaje: String?
 )
 
-data class SalaContextoRequest(  // Modelo para actualizar el contexto de una sala de chat
+// Request para actualizar contexto
+data class SalaContextoRequest(
     val contextoPersistente: String,
     val ultimoMensaje: String
 )
 
 // ===== MODELOS DE INTERACCION CHAT =====
 
-data class ChatRequest(  // Modelo para enviar un mensaje al chatbot
+data class ChatRequest(
     val usuarioRef: String,
     val mensajeUsuario: String,
     val respuestaChatbot: String,
     val contexto: String
 )
 
-data class ChatResponse(  // Modelo para recibir una respuesta del chatbot
+data class ChatResponse(
     val mensaje_usuario: String,
     val respuesta_chatbot: String,
     val guardado: Boolean
 )
 
-data class RenderIpResponse(   // Modelo para obtener la IP de render
+data class RenderIpResponse(
     val outbound_ip: String
 )

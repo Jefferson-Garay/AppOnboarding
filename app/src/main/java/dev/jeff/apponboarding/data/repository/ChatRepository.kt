@@ -10,7 +10,20 @@ class ChatRepository {
     private val salaChatApi = RetrofitInstance.salaChatApi
     private val interaccionChatApi = RetrofitInstance.interaccionChatApi
 
-    // ===== SALA CHAT ======
+    // ===== SALA CHAT =====
+
+    // Obtener todas las salas
+    suspend fun getSalas(): List<SalaChatModel> {
+        return try {
+            salaChatApi.getSalas()
+        } catch (e: HttpException) {
+            Log.e("CHAT", "Error HTTP obteniendo salas: ${e.code()}")
+            emptyList()
+        } catch (e: Exception) {
+            Log.e("CHAT", "Error obteniendo salas: ${e.message}")
+            emptyList()
+        }
+    }
 
     // Obtener sala por usuario
     suspend fun getSalaByUsuario(usuarioRef: String): SalaChatModel? {

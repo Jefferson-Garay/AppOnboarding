@@ -1,11 +1,12 @@
 package dev.jeff.apponboarding.presentation.chat
 
-
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.jeff.apponboarding.data.model.ChatResponse
 import dev.jeff.apponboarding.data.model.SalaChatModel
 import dev.jeff.apponboarding.data.model.SalaChatRequest
+import dev.jeff.apponboarding.data.model.SalaContextoRequest
 import dev.jeff.apponboarding.data.repository.ChatRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -116,6 +117,9 @@ class ChatViewModel(
                 )
                 _messages.value = _messages.value + botMessage
                 _sendState.value = SendMessageState.Success(response)
+
+                // Guardar contexto y último mensaje en la sala
+                saveContextoToSala(usuarioRef, message, response.respuesta_chatbot)
             } else {
                 // Agregar mensaje de error
                 val errorMessage = ChatMessage(
@@ -125,6 +129,33 @@ class ChatViewModel(
                 )
                 _messages.value = _messages.value + errorMessage
                 _sendState.value = SendMessageState.Error("Error al enviar mensaje")
+            }
+        }
+    }
+
+    // Guardar contexto en la sala después de cada interacción
+    private fun saveContextoToSala(usuarioRef: String, mensajeUsuario: String, respuestaBot: String) {
+        viewModelScope.launch {
+            try {
+                // Construir contexto persistente con el historial
+                val contextoPersistente = buildString {
+                    append(_currentSala.value?.contextoPersistente ?: "")
+                    append("\nUsuario: $mensajeUsuario")
+                    append("\nAsistente: $respuestaBot")
+                }
+
+                val request = SalaContextoRequest(
+                    contextoPersistente = contextoPersistente,
+                    ultimoMensaje = respuestaBot
+                )
+
+                val salaActualizada = repository.updateContextoSala(usuarioRef, request)
+                if (salaActualizada != null) {
+                    _currentSala.value = salaActualizada
+                    Log.d("CHAT", "Contexto guardado exitosamente")
+                }
+            } catch (e: Exception) {
+                Log.e("CHAT", "Error guardando contexto: ${e.message}")
             }
         }
     }

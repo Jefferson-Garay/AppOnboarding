@@ -8,8 +8,12 @@ import retrofit2.http.*
 
 interface SalaChatService {
 
+    // Obtener todas las salas
+    @GET("salas")
+    suspend fun getSalas(): List<SalaChatModel>
+
     // Obtener sala por usuario
-    @GET("salas/{usuarioRef}")  // Obtiene la sala de chat del usuario si existe
+    @GET("salas/{usuarioRef}")
     suspend fun getSalaByUsuario(@Path("usuarioRef") usuarioRef: String): SalaChatModel
 
     // Crear una sala
@@ -17,20 +21,20 @@ interface SalaChatService {
     suspend fun createSala(@Body sala: SalaChatRequest): SalaChatModel
 
     // Actualizar estado de la sala
-    @PUT("salas/{usuarioRef}/estado")  // Actualiza el progreso (ej: "completó 50% del onboarding")
+    @PUT("salas/{usuarioRef}/estado")
     suspend fun updateEstadoSala(
         @Path("usuarioRef") usuarioRef: String,
         @Body estado: SalaEstadoRequest
     ): SalaChatModel
 
     // Actualizar contexto de la sala
-    @PUT("salas/{usuarioRef}/contexto")   // Guarda el contexto de la conversación
+    @PUT("salas/{usuarioRef}/contexto")
     suspend fun updateContextoSala(
         @Path("usuarioRef") usuarioRef: String,
         @Body contexto: SalaContextoRequest
     ): SalaChatModel
 
-    // Eliminar sala si es necesario
+    // Eliminar sala
     @DELETE("salas/{usuarioRef}")
     suspend fun deleteSala(@Path("usuarioRef") usuarioRef: String): Map<String, String>
 }
