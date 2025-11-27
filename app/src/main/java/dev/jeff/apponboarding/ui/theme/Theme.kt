@@ -9,47 +9,35 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
 
-// Esquema de colores oscuros adaptado a la identidad corporativa
 private val DarkColorScheme = darkColorScheme(
-    primary = CorporateBlueLight, // Azul más claro para resaltar en oscuro
-    onPrimary = Color.White,
-    primaryContainer = CorporateBlue,
-    onPrimaryContainer = Color.White,
-    secondary = CorporateBlue,
-    onSecondary = Color.White,
-    background = Color(0xFF121212), // Fondo oscuro estándar
-    surface = Color(0xFF1E1E1E), // Superficie oscura
-    onBackground = Color.White,
-    onSurface = Color.White
+    primary = Purple80,
+    secondary = PurpleGrey80,
+    tertiary = Pink80
 )
 
-// Esquema de colores claros oficial
 private val LightColorScheme = lightColorScheme(
-    primary = CorporateBlue,
+    primary = Purple40,
+    secondary = PurpleGrey40,
+    tertiary = Pink40
+
+    /* Other default colors to override
+    background = Color(0xFFFFFBFE),
+    surface = Color(0xFFFFFBFE),
     onPrimary = Color.White,
-    primaryContainer = CorporateBlueDark,
-    onPrimaryContainer = Color.White,
-    secondary = CorporateBlueLight,
     onSecondary = Color.White,
-    background = CorporateGrayLight, // Gris muy claro institucional
-    surface = Color.White,
-    onBackground = CorporateBlack,
-    onSurface = CorporateBlack,
-    surfaceVariant = CorporateGrayLight,
-    onSurfaceVariant = CorporateGrayDark
+    onTertiary = Color.White,
+    onBackground = Color(0xFF1C1B1F),
+    onSurface = Color(0xFF1C1B1F),
+    */
 )
 
 @Composable
 fun AppOnboardingTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Desactivamos dynamicColor por defecto para forzar identidad corporativa
-    dynamicColor: Boolean = false, 
+    // Dynamic color is available on Android 12+
+    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -57,19 +45,9 @@ fun AppOnboardingTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
+
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
-    }
-
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            // Si está en tema oscuro, la barra de estado es transparente o oscura
-            // Aquí le decimos al sistema si usar iconos claros u oscuros
-            // (isAppearanceLightStatusBars = !darkTheme) -> Si es oscuro, false (iconos claros)
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
-        }
     }
 
     MaterialTheme(

@@ -6,7 +6,8 @@ import androidx.lifecycle.viewModelScope
 import dev.jeff.apponboarding.data.model.RecursoModel
 import dev.jeff.apponboarding.data.model.RecursoRequest
 import dev.jeff.apponboarding.data.repository.RecursoRepository
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class RecursoViewModel(
@@ -27,31 +28,6 @@ class RecursoViewModel(
 
     private val _estadoState = MutableStateFlow<UpdateEstadoState>(UpdateEstadoState.Idle)
     val estadoState: StateFlow<UpdateEstadoState> = _estadoState
-
-    // --- Search Logic for HU-013 ---
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery: StateFlow<String> = _searchQuery
-
-    val filteredRecursos: StateFlow<List<RecursoModel>> = combine(_recursosState, _searchQuery) { state, query ->
-        if (state is RecursosState.Success) {
-            if (query.isBlank() || query.trim().equals("ver todos", ignoreCase = true)) {
-                state.recursos
-            } else {
-                val q = query.trim().lowercase()
-                state.recursos.filter {
-                    it.descripcion.lowercase().contains(q) ||
-                    it.tipo.lowercase().contains(q)
-                }
-            }
-        } else {
-            emptyList()
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    fun updateSearchQuery(query: String) {
-        _searchQuery.value = query
-    }
-    // -------------------------------
 
     // Cargar todos los recursos
     fun loadRecursos() {
