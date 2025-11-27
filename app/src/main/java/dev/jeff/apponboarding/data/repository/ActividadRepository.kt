@@ -4,8 +4,6 @@ import android.util.Log
 import dev.jeff.apponboarding.data.model.ActividadCountResponse
 import dev.jeff.apponboarding.data.model.ActividadModel
 import dev.jeff.apponboarding.data.model.ActividadRequest
-import dev.jeff.apponboarding.data.model.ResumenGlobalResponse
-import dev.jeff.apponboarding.data.model.ResumenUsuarioResponse
 import dev.jeff.apponboarding.data.remote.RetrofitInstance
 import retrofit2.HttpException
 
@@ -13,170 +11,106 @@ class ActividadRepository {
 
     private val api = RetrofitInstance.actividadApi
 
-    // Obtener todas las actividades
     suspend fun getActividades(): List<ActividadModel> {
         return try {
             api.getActividades()
-        } catch (e: HttpException) {
-            Log.e("ACTIVIDAD", "Error HTTP: ${e.code()} - ${e.message()}")
-            emptyList()
         } catch (e: Exception) {
-            Log.e("ACTIVIDAD", "Error inesperado: ${e.message}")
+            Log.e("ACTIVIDAD", "Error getActividades: ${e.message}")
             emptyList()
         }
     }
 
-    // Crear actividad
     suspend fun createActividad(actividad: ActividadRequest): ActividadModel? {
         return try {
             api.createActividad(actividad)
-        } catch (e: HttpException) {
-            Log.e("ACTIVIDAD", "Error HTTP creando: ${e.code()} - ${e.message()}")
-            null
         } catch (e: Exception) {
-            Log.e("ACTIVIDAD", "Error creando actividad: ${e.message}")
+            Log.e("ACTIVIDAD", "Error createActividad: ${e.message}")
             null
         }
     }
 
-    // Obtener actividad por ID
     suspend fun getActividadById(id: String): ActividadModel? {
         return try {
             api.getActividadById(id)
-        } catch (e: HttpException) {
-            Log.e("ACTIVIDAD", "Error HTTP obteniendo actividad: ${e.code()}")
-            null
         } catch (e: Exception) {
-            Log.e("ACTIVIDAD", "Error obteniendo actividad: ${e.message}")
+            Log.e("ACTIVIDAD", "Error getActividadById: ${e.message}")
             null
         }
     }
 
-    // Actualizar actividad
     suspend fun updateActividad(id: String, actividad: ActividadRequest): ActividadModel? {
         return try {
             api.updateActividad(id, actividad)
-        } catch (e: HttpException) {
-            Log.e("ACTIVIDAD", "Error HTTP actualizando: ${e.code()}")
-            null
         } catch (e: Exception) {
-            Log.e("ACTIVIDAD", "Error actualizando actividad: ${e.message}")
+            Log.e("ACTIVIDAD", "Error updateActividad: ${e.message}")
             null
         }
     }
 
-    // Eliminar actividad
+    // NUEVO: Actualizar solo el estado
+    suspend fun updateEstadoActividad(id: String, estado: String): Boolean {
+        return try {
+            // El API Swagger dice que recibe un string en el body.
+            // Retrofit serializará el string como JSON ("Completada")
+            api.updateEstadoActividad(id, estado)
+            true
+        } catch (e: HttpException) {
+            Log.e("ACTIVIDAD", "Error HTTP updateEstado: ${e.code()}")
+            false
+        } catch (e: Exception) {
+            Log.e("ACTIVIDAD", "Error updateEstado: ${e.message}")
+            false
+        }
+    }
+
     suspend fun deleteActividad(id: String): Boolean {
         return try {
             api.deleteActividad(id)
             true
-        } catch (e: HttpException) {
-            Log.e("ACTIVIDAD", "Error HTTP eliminando: ${e.code()}")
-            false
         } catch (e: Exception) {
-            Log.e("ACTIVIDAD", "Error eliminando actividad: ${e.message}")
+            Log.e("ACTIVIDAD", "Error deleteActividad: ${e.message}")
             false
         }
     }
 
-    // Obtener actividades por usuario
     suspend fun getActividadesByUsuario(usuarioRef: String): List<ActividadModel> {
         return try {
             api.getActividadesByUsuario(usuarioRef)
-        } catch (e: HttpException) {
-            Log.e("ACTIVIDAD", "Error HTTP obteniendo por usuario: ${e.code()}")
-            emptyList()
         } catch (e: Exception) {
-            Log.e("ACTIVIDAD", "Error obteniendo actividades de usuario: ${e.message}")
+            Log.e("ACTIVIDAD", "Error getByUsuario: ${e.message}")
             emptyList()
         }
     }
 
-    // 🔹 CORRECCIÓN: Filtro Local para Pendientes
-    // Como no existe el endpoint en tu API, filtramos la lista del usuario aquí.
     suspend fun getActividadesPendientes(usuarioRef: String): List<ActividadModel> {
         return try {
-            val actividades = api.getActividadesByUsuario(usuarioRef)
-            // Filtramos las que NO estén completadas
-            actividades.filter { it.estado?.lowercase() != "completada" }
+            api.getActividadesPendientes(usuarioRef)
         } catch (e: Exception) {
-            Log.e("ACTIVIDAD", "Error filtrando pendientes: ${e.message}")
+            Log.e("ACTIVIDAD", "Error getPendientes: ${e.message}")
             emptyList()
         }
     }
 
-    // 🔹 CORRECCIÓN: Filtro Local por Estado
-    // Si tu API no tiene endpoint por estado, bajamos todas y filtramos.
     suspend fun getActividadesByEstado(estado: String): List<ActividadModel> {
         return try {
-            val todas = api.getActividades()
-            todas.filter { it.estado?.equals(estado, ignoreCase = true) == true }
+            api.getActividadesByEstado(estado)
         } catch (e: Exception) {
-            Log.e("ACTIVIDAD", "Error filtrando por estado: ${e.message}")
             emptyList()
         }
     }
 
-    // Obtener actividades por rango de fechas
-    suspend fun getActividadesByRangoFechas(
-        fechaInicio: String,
-        fechaFin: String
-    ): List<ActividadModel> {
+    suspend fun getActividadesByRangoFechas(fechaInicio: String, fechaFin: String): List<ActividadModel> {
         return try {
             api.getActividadesByRangoFechas(fechaInicio, fechaFin)
-        } catch (e: HttpException) {
-            Log.e("ACTIVIDAD", "Error HTTP rango fechas: ${e.code()}")
-            emptyList()
         } catch (e: Exception) {
-            Log.e("ACTIVIDAD", "Error obteniendo por rango: ${e.message}")
             emptyList()
         }
     }
 
-    // Obtener conteo de actividades
     suspend fun getActividadesCount(usuarioRef: String): ActividadCountResponse? {
         return try {
             api.getActividadesCount(usuarioRef)
-        } catch (e: HttpException) {
-            Log.e("ACTIVIDAD", "Error HTTP obteniendo conteo: ${e.code()}")
-            null
         } catch (e: Exception) {
-            Log.e("ACTIVIDAD", "Error obteniendo conteo: ${e.message}")
-            null
-        }
-    }
-
-    // 🔹 NUEVO: Cambiar estado (PATCH)
-    suspend fun cambiarEstadoActividad(id: String, nuevoEstado: String): ActividadModel? {
-        return try {
-            api.cambiarEstadoActividad(id, nuevoEstado)
-        } catch (e: HttpException) {
-            Log.e("ACTIVIDAD", "Error HTTP cambiando estado: ${e.code()}")
-            null
-        } catch (e: Exception) {
-            Log.e("ACTIVIDAD", "Error cambiando estado: ${e.message}")
-            null
-        }
-    }
-
-    // --- DASHBOARD ---
-
-    // 🔹 NUEVO: Obtener Resumen Global
-    suspend fun getResumenGlobal(): ResumenGlobalResponse? {
-        return try {
-            api.getResumenGlobal()
-        } catch (e: Exception) {
-            Log.e("ACTIVIDAD", "Error obteniendo resumen global: ${e.message}")
-            null
-        }
-    }
-
-    // 🔹 NUEVO: Obtener Resumen Usuario
-    suspend fun getResumenUsuario(usuarioRef: String): ResumenUsuarioResponse? {
-        return try {
-            api.getResumenUsuario(usuarioRef)
-        } catch (e: Exception) {
-            Log.e("ACTIVIDAD", "Error obteniendo resumen usuario: ${e.message}")
             null
         }
     }
