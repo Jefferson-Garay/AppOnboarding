@@ -51,11 +51,15 @@ data class DrawerMenuItem(
 @Composable
 fun HomeScreen(
     usuario: UsuarioModel?,
+    isDarkTheme: Boolean,
+    onToggleTheme: () -> Unit,
     actividadViewModel: ActividadViewModel,
     onNavigateToActividades: () -> Unit,
     onNavigateToRecursos: () -> Unit,
     onNavigateToRoles: () -> Unit,
     onNavigateToChat: () -> Unit,
+    onNavigateToHistory: () -> Unit,
+    onNavigateToConfiguracion: () -> Unit,
     onNavigateToSupervisor: () -> Unit,
     onNavigateToAyuda: () -> Unit,
     onNavigateToMensajes: () -> Unit,
@@ -67,8 +71,12 @@ fun HomeScreen(
     val notificacionesDrawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var selectedItem by remember { mutableStateOf("inicio") }
-    var isDarkTheme by remember { mutableStateOf(false) }
+    
+    // Para pruebas: asumimos que todos son admin por ahora
+    val isAdmin = true // usuario?.rolRef != null 
 
+    // Items del menú
+    val menuItems = mutableListOf(
     val pendientesCount by actividadViewModel.pendientesCount.collectAsState()
     val actividadesState by actividadViewModel.actividadesState.collectAsState()
     val notificacionesList by actividadViewModel.notificacionesState.collectAsState()
@@ -111,13 +119,48 @@ fun HomeScreen(
         DrawerMenuItem("roles", "Gestionar Roles", Icons.Outlined.Security, Icons.Filled.Security),
         DrawerMenuItem("usuarios", "Gestionar Empleados", Icons.Outlined.People, Icons.Filled.People),
         DrawerMenuItem("perfil", "Mi Información", Icons.Outlined.Person, Icons.Filled.Person),
-        DrawerMenuItem("ayuda", "Ayuda", Icons.Outlined.Help, Icons.Filled.Help),
+        // Se elimina "Ayuda"
         DrawerMenuItem("configuracion", "Configuración", Icons.Outlined.Settings, Icons.Filled.Settings)
     )
+
+    if (isAdmin) {
+        // Agregar items de admin
+        menuItems.add(4, DrawerMenuItem("roles", "Gestionar Roles", Icons.Outlined.Security, Icons.Filled.Security))
+        menuItems.add(5, DrawerMenuItem("history", "Historial Chat", Icons.Outlined.History, Icons.Filled.History))
+    }
 
     ModalNavigationDrawer(
         drawerState = notificacionesDrawerState,
         drawerContent = {
+            ModalDrawerSheet(
+                drawerContainerColor = MaterialTheme.colorScheme.primaryContainer // Adaptable al tema
+            ) {
+                // Header del Drawer
+                DrawerHeader(
+                    usuario = usuario,
+                    onCloseDrawer = {
+                        scope.launch { drawerState.close() }
+                    }
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                // Items del menú
+                menuItems.forEach { item ->
+                    DrawerItem(
+                        item = item,
+                        isSelected = selectedItem == item.id,
+                        onClick = {
+                            selectedItem = item.id
+                            scope.launch { drawerState.close() }
+
+                            when (item.id) {
+                                "chat" -> onNavigateToChat()
+                                "actividades" -> onNavigateToActividades()
+                                "recursos" -> onNavigateToRecursos()
+                                "roles" -> onNavigateToRoles()
+                                "history" -> onNavigateToHistory()
+                                "configuracion" -> onNavigateToConfiguracion()
             NotificacionesDrawer(
                 actividades = notificacionesList,
                 isLoading = actividadesState is ActividadesState.Loading,
@@ -230,6 +273,25 @@ fun HomeScreen(
                                     Icon(Icons.Default.Notifications, "Notificaciones")
                                 }
                             }
+                        }
+
+                        // Cambiar tema claro/oscuro
+                        IconButton(
+                            onClick = onToggleTheme
+                        ) {
+                            Icon(
+                                if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                contentDescription = "Cambiar tema"
+                            )
+                        }
+
+                        // Cerrar sesión
+                        IconButton(onClick = onLogout) {
+                            Icon(Icons.Default.ExitToApp, contentDescription = "Cerrar sesión")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
                             IconButton(onClick = { isDarkTheme = !isDarkTheme }) {
                                 Icon(Icons.Default.DarkMode, "Tema")
                             }
@@ -326,6 +388,45 @@ fun HomeScreen(
                             QuickAccessCard(modifier = Modifier.weight(1f), icon = Icons.Default.Folder, title = "Recursos", onClick = onNavigateToRecursos)
                         }
 
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    QuickAccessCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Chat,
+                        title = "Asistente",
+                        onClick = onNavigateToChat
+                    )
+                    QuickAccessCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Assignment,
+                        title = "Actividades",
+                        onClick = onNavigateToActividades
+                    )
+                    QuickAccessCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Folder,
+                        title = "Recursos",
+                        onClick = onNavigateToRecursos
+                    )
+                }
+                
+                if (isAdmin) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        QuickAccessCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.History,
+                            title = "Historial Chat",
+                            onClick = onNavigateToHistory
+                        )
+                        // Espacio para más botones admin
+                        Spacer(Modifier.weight(2f))
+                    }
+                }
                         Spacer(Modifier.weight(1f))
 
                         Card(
@@ -376,6 +477,91 @@ fun HomeScreen(
 }
 
 @Composable
+fun DrawerHeader(
+    usuario: UsuarioModel?,
+    onCloseDrawer: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onCloseDrawer) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Cerrar menú",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer // Adaptable
+                )
+            }
+            Text(
+                text = "Cerrar menú",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Spacer(Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+fun DrawerItem(
+    item: DrawerMenuItem,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    isLogout: Boolean = false
+) {
+    // Colores adaptables al tema
+    val backgroundColor = when {
+        isSelected -> MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)
+        else -> Color.Transparent
+    }
+
+    val contentColor = when {
+        isLogout -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onPrimaryContainer
+    }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        color = backgroundColor,
+        shape = MaterialTheme.shapes.medium,
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                imageVector = if (isSelected) item.selectedIcon else item.icon,
+                contentDescription = item.title,
+                tint = contentColor
+            )
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = contentColor
+            )
+        }
+    }
+}
+
+@Composable
+fun QuickAccessCard(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit
+) {
 fun QuickAccessCard(modifier: Modifier = Modifier, icon: ImageVector, title: String, onClick: () -> Unit) {
     Card(
         modifier = modifier.aspectRatio(1f).clickable(onClick = onClick),

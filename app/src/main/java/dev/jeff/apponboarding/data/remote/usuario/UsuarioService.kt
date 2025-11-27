@@ -1,6 +1,11 @@
 package dev.jeff.apponboarding.data.remote.usuario
 
 import dev.jeff.apponboarding.data.model.UsuarioModel
+import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Path
 import dev.jeff.apponboarding.data.model.UsuarioRequest
 import retrofit2.http.*
 
@@ -25,6 +30,19 @@ interface UsuarioService {
     // --- MÉTODOS US-17 ---
 
     @POST("Usuario")
+    suspend fun createUsuario(@Body usuario: Map<String, Any>): Map<String, String>
+    
+    @GET("Usuario/{id}")
+    suspend fun getUsuarioById(@Path("id") id: String): UsuarioModel
+
+    // Endpoint genérico PUT para actualizar usuario
+    // Retorna Any? para evitar errores de parsing si devuelve un objeto complejo
+    @PUT("Usuario/{id}")
+    suspend fun updateUsuario(
+        @Path("id") id: String,
+        @Body body: Map<String, Any?> 
+    ): Any?
+}
     suspend fun createUsuario(@Body usuario: UsuarioRequest): Map<String, String>
 
     @GET("Usuario/{id}")
