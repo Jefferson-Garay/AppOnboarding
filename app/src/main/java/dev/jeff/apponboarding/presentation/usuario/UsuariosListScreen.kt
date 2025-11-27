@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.jeff.apponboarding.data.model.RolModel
 import dev.jeff.apponboarding.data.model.UsuarioModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,6 +28,7 @@ fun UsuariosListScreen(
     onNavigateToEdit: (String) -> Unit
 ) {
     val usuarios by viewModel.usuariosState.collectAsState()
+    val roles by viewModel.rolesState.collectAsState() // Necesitamos los roles para saber los nombres
     val isLoading by viewModel.isLoading.collectAsState()
     val opStatus by viewModel.opStatus.collectAsState()
 
@@ -34,6 +36,7 @@ fun UsuariosListScreen(
 
     LaunchedEffect(Unit) {
         viewModel.loadUsuarios()
+        viewModel.loadRoles() // IMPORTANTE: Cargar roles para poder mostrar sus nombres
     }
 
     LaunchedEffect(opStatus) {
@@ -72,12 +75,12 @@ fun UsuariosListScreen(
                         items(usuarios) { usuario ->
                             UsuarioItemCard(
                                 usuario = usuario,
+                                roles = roles, // Pasamos la lista de roles
                                 onEdit = {
                                     val idLimpio = usuario.obtenerIdReal()
                                     if (idLimpio.isNotBlank()) onNavigateToEdit(idLimpio)
                                 },
                                 onDelete = {
-                                    // AQUÍ USAMOS EL ID RECONSTRUIDO
                                     val idLimpio = usuario.obtenerIdReal()
                                     if (idLimpio.isNotBlank()) viewModel.deleteUsuario(idLimpio)
                                 }
@@ -97,10 +100,16 @@ fun UsuariosListScreen(
 @Composable
 fun UsuarioItemCard(
     usuario: UsuarioModel,
+    roles: List<RolModel>,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // Lógica para encontrar el nombre del rol
+    val nombreRol = remember(usuario.rolRef, roles) {
+        roles.find { it.id == usuario.rolRef }?.nombre ?: "Sin Rol Asignado"
+    }
 
     Card(
         elevation = CardDefaults.cardElevation(2.dp),
@@ -117,18 +126,29 @@ fun UsuarioItemCard(
                 color = MaterialTheme.colorScheme.primaryContainer
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    // Usamos las iniciales si están disponibles
+                    val iniciales = usuario.nombre.take(2).uppercase()
+                    Text(text = iniciales, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
             }
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = usuario.nombre, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 Text(text = usuario.correo, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                Text(
-                    text = if (usuario.area.isNullOrBlank()) "Sin Área" else usuario.area,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+
+                // AQUÍ MOSTRAMOS EL ROL EN LUGAR DEL ÁREA
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Text(
+                        text = nombreRol,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
             }
             IconButton(onClick = onEdit) {
                 Icon(Icons.Default.Edit, "Editar", tint = MaterialTheme.colorScheme.primary)

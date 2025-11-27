@@ -25,39 +25,53 @@ fun UsuarioDetailScreen(
     val roles by viewModel.rolesState.collectAsState()
     val opStatus by viewModel.opStatus.collectAsState()
 
+    // Variables de estado para el formulario
     var nombre by remember { mutableStateOf("") }
     var correo by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var telefono by remember { mutableStateOf("") }
 
+    // Variables para el Dropdown
     var rolExpanded by remember { mutableStateOf(false) }
-    var selectedRolName by remember { mutableStateOf("") }
+    var selectedRolName by remember { mutableStateOf("Seleccionar Rol") }
     var selectedRolId by remember { mutableStateOf("") }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // 1. Cargar datos iniciales
     LaunchedEffect(Unit) {
-        viewModel.loadRoles()
+        viewModel.loadRoles() // Cargar lista de roles para el dropdown
+
+        // Si estamos en modo EDICIÓN (usuarioId no es nulo)
         if (usuarioId != null) {
-            val usuario = viewModel.getUsuarioById(usuarioId)
-            usuario?.let {
-                nombre = it.nombre
-                correo = it.correo
-                telefono = it.telefono ?: ""
-                selectedRolId = it.rolRef ?: ""
+            val usuarioEncontrado = viewModel.getUsuarioById(usuarioId)
+
+            usuarioEncontrado?.let { user ->
+                // Rellenamos los campos con la info del usuario
+                nombre = user.nombre
+                correo = user.correo
+                telefono = user.telefono ?: ""
+
+                // Guardamos el ID del rol para buscar su nombre después
+                user.rolRef?.let { rolRef ->
+                    selectedRolId = rolRef
+                }
             }
         }
     }
 
+    // 2. Efecto para actualizar el nombre del Rol en el Dropdown
+    // Se ejecuta cuando cargan los roles o cuando cambia el rol seleccionado
     LaunchedEffect(roles, selectedRolId) {
         if (roles.isNotEmpty() && selectedRolId.isNotBlank()) {
-            val rol = roles.find { it.id == selectedRolId }
-            if (rol != null) {
-                selectedRolName = rol.nombre
+            val rolObj = roles.find { it.id == selectedRolId }
+            if (rolObj != null) {
+                selectedRolName = rolObj.nombre
             }
         }
     }
 
+    // 3. Manejo de mensajes de éxito/error
     LaunchedEffect(opStatus) {
         opStatus?.let {
             snackbarHostState.showSnackbar(it)
@@ -89,6 +103,7 @@ fun UsuarioDetailScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Nombre
             OutlinedTextField(
                 value = nombre,
                 onValueChange = { nombre = it },
@@ -97,6 +112,7 @@ fun UsuarioDetailScreen(
                 singleLine = true
             )
 
+            // Correo
             OutlinedTextField(
                 value = correo,
                 onValueChange = { correo = it },
@@ -106,6 +122,7 @@ fun UsuarioDetailScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
             )
 
+            // Contraseña (Opcional en edición)
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -113,9 +130,11 @@ fun UsuarioDetailScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                placeholder = { if (usuarioId != null) Text("Dejar en blanco para mantener actual") }
             )
 
+            // Teléfono
             OutlinedTextField(
                 value = telefono,
                 onValueChange = { telefono = it },
@@ -125,6 +144,7 @@ fun UsuarioDetailScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
             )
 
+            // Dropdown de Rol
             ExposedDropdownMenuBox(
                 expanded = rolExpanded,
                 onExpandedChange = { rolExpanded = !rolExpanded }
@@ -162,7 +182,7 @@ fun UsuarioDetailScreen(
                     val request = UsuarioRequest(
                         nombre = nombre,
                         correo = correo,
-                        password = password,
+                        password = password, // El backend debe saber ignorarla si está vacía en update
                         rolRef = selectedRolId,
                         telefono = telefono
                     )
@@ -174,6 +194,7 @@ fun UsuarioDetailScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
+                // Validación: Se habilita si hay datos básicos. Password obligatoria solo al crear.
                 enabled = nombre.isNotBlank() && correo.isNotBlank() && selectedRolId.isNotBlank() && (usuarioId != null || password.isNotBlank())
             ) {
                 Text(if (usuarioId == null) "Crear Usuario" else "Guardar Cambios")
