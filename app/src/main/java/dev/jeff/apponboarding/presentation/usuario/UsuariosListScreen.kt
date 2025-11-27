@@ -28,12 +28,23 @@ fun UsuariosListScreen(
 ) {
     val usuarios by viewModel.usuariosState.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val opStatus by viewModel.opStatus.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
         viewModel.loadUsuarios()
     }
 
+    LaunchedEffect(opStatus) {
+        opStatus?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearStatus()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { TopAppBar(title = { Text("Gestión de Empleados") }) },
         floatingActionButton = {
             FloatingActionButton(onClick = onNavigateToCreate) {
@@ -61,12 +72,23 @@ fun UsuariosListScreen(
                         items(usuarios) { usuario ->
                             UsuarioItemCard(
                                 usuario = usuario,
-                                onEdit = { onNavigateToEdit(usuario.id.toString()) },
-                                onDelete = { viewModel.deleteUsuario(usuario.id.toString()) }
+                                onEdit = {
+                                    val idLimpio = usuario.obtenerIdReal()
+                                    if (idLimpio.isNotBlank()) onNavigateToEdit(idLimpio)
+                                },
+                                onDelete = {
+                                    // AQUÍ USAMOS EL ID RECONSTRUIDO
+                                    val idLimpio = usuario.obtenerIdReal()
+                                    if (idLimpio.isNotBlank()) viewModel.deleteUsuario(idLimpio)
+                                }
                             )
                         }
                     }
                 }
+            }
+
+            if (isLoading && usuarios.isNotEmpty()) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter))
             }
         }
     }
@@ -121,7 +143,7 @@ fun UsuarioItemCard(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Eliminar Usuario") },
-            text = { Text("¿Estás seguro de que quieres eliminar a ${usuario.nombre}? Esto no se puede deshacer.") },
+            text = { Text("¿Estás seguro de eliminar a ${usuario.nombre}?") },
             confirmButton = {
                 Button(
                     onClick = {
