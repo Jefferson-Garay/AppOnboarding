@@ -70,15 +70,23 @@ class UsuarioViewModel : ViewModel() {
         }
     }
 
-    fun deleteUsuario(id: String) {
+    fun deleteUsuario(idOriginal: String) {
+        // En teoría idOriginal ya viene limpio desde la UI, pero por seguridad:
+        if (idOriginal.isBlank() || idOriginal.length < 10) {
+            _opStatus.value = "Error: ID inválido ($idOriginal)"
+            return
+        }
+
         viewModelScope.launch {
             _isLoading.value = true
-            val success = repository.deleteUsuario(id)
+            // Llamamos al repositorio
+            val success = repository.deleteUsuario(idOriginal)
+
             if (success) {
-                loadUsuarios()
-                _opStatus.value = "Usuario eliminado"
+                _opStatus.value = "Usuario eliminado correctamente"
+                loadUsuarios() // Recargamos la lista
             } else {
-                _opStatus.value = "Error al eliminar"
+                _opStatus.value = "Error API: No se pudo eliminar el ID $idOriginal"
             }
             _isLoading.value = false
         }

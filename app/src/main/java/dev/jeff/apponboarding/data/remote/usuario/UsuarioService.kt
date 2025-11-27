@@ -2,6 +2,8 @@ package dev.jeff.apponboarding.data.remote.usuario
 
 import dev.jeff.apponboarding.data.model.UsuarioModel
 import dev.jeff.apponboarding.data.model.UsuarioRequest
+import okhttp3.ResponseBody
+import retrofit2.Response
 import retrofit2.http.*
 
 data class LoginRequest(
@@ -36,6 +38,7 @@ interface UsuarioService {
         @Body usuario: UsuarioRequest
     ): Map<String, String>
 
+    // CAMBIADO: Usamos Response<ResponseBody> para manejar cualquier respuesta (vacía o json)
     @DELETE("Usuario/{id}")
-    suspend fun deleteUsuario(@Path("id") id: String): Map<String, String>
+    suspend fun deleteUsuario(@Path("id") id: String): Response<ResponseBody>
 }

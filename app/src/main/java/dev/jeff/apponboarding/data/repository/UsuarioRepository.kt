@@ -33,8 +33,6 @@ class UsuarioRepository {
         }
     }
 
-    // --- MÉTODOS US-17 ---
-
     suspend fun getUsuarioById(id: String): UsuarioModel? {
         return try {
             api.getUsuarioById(id)
@@ -64,18 +62,24 @@ class UsuarioRepository {
         }
     }
 
+    // --- CORREGIDO PARA US-17 ---
     suspend fun deleteUsuario(id: String): Boolean {
         return try {
-            api.deleteUsuario(id)
-            true
+            Log.d("USUARIOS", "Intentando eliminar ID: $id")
+            val response = api.deleteUsuario(id)
+
+            if (response.isSuccessful) {
+                Log.d("USUARIOS", "Eliminación exitosa: ${response.code()}")
+                true
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e("USUARIOS", "Error API ${response.code()}: $errorBody")
+                false
+            }
         } catch (e: Exception) {
-            Log.e("USUARIOS", "Error eliminando: ${e.message}")
+            Log.e("USUARIOS", "Excepción al eliminar: ${e.message}")
+            e.printStackTrace()
             false
         }
-    }
-
-    // Mantener compatibilidad con código viejo si existía
-    suspend fun crearUsuario(data: Map<String, Any>): String {
-        return "Deprecated"
     }
 }
