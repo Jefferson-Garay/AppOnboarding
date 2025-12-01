@@ -79,6 +79,7 @@ fun AppNavGraph() {
                 },
                 onLogout = {
                     currentUser = null
+                    loginViewModel.resetLoginState()
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
                     }

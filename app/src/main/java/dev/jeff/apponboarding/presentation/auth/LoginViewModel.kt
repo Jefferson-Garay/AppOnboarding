@@ -1,14 +1,13 @@
 package dev.jeff.apponboarding.presentation.auth
 
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.jeff.apponboarding.data.repository.UsuarioRepository
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
-class LoginViewModel(   //Maneja toda la lógica de la interfaz del chat:
+class LoginViewModel(
     private val repository: UsuarioRepository
 ) : ViewModel() {
 
@@ -27,6 +26,11 @@ class LoginViewModel(   //Maneja toda la lógica de la interfaz del chat:
                 _loginState.value = LoginState.Error("Credenciales inválidas")
             }
         }
+    }
+
+    // --- AGREGADO PARA CORREGIR BUG DE LOGOUT ---
+    fun resetLoginState() {
+        _loginState.value = LoginState.Idle
     }
 }
 
