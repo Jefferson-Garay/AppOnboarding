@@ -26,10 +26,9 @@ import java.util.Calendar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProgramarMensajesScreen(
-    usuarioRef: String, // Ignoramos este parámetro ahora, usamos el selector interno
+    usuarioRef: String,
     onNavigateBack: () -> Unit
 ) {
-    // Instanciamos el ViewModel aquí
     val viewModel = remember { MensajeViewModel() }
 
     val mensajes by viewModel.mensajesState.collectAsState()
@@ -39,8 +38,6 @@ fun ProgramarMensajesScreen(
     val successMessage by viewModel.opSuccess.collectAsState()
 
     var showCreateDialog by remember { mutableStateOf(false) }
-
-    // Variables para el Dropdown de empleados
     var expandedEmpleado by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -49,7 +46,10 @@ fun ProgramarMensajesScreen(
         successMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearSuccessMessage()
-            showCreateDialog = false
+            // Solo cerramos el diálogo si fue un mensaje de éxito, no de error
+            if (!it.contains("Error") && !it.contains("Fallo")) {
+                showCreateDialog = false
+            }
         }
     }
 
@@ -67,7 +67,6 @@ fun ProgramarMensajesScreen(
             )
         },
         floatingActionButton = {
-            // Solo mostramos el botón si hay un usuario seleccionado
             if (selectedUsuario != null) {
                 FloatingActionButton(
                     onClick = { showCreateDialog = true },
@@ -285,6 +284,8 @@ fun CreateMensajeDialog(
     var titulo by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
     var tipo by remember { mutableStateOf(TipoMensaje.RECORDATORIO) }
+
+    // Por defecto hoy, pero cuidado si el backend exige fecha futura
     var fecha by remember { mutableStateOf(LocalDate.now().toString()) }
     var hora by remember { mutableStateOf("09:00") }
     var condicion by remember { mutableStateOf(CondicionActivacion.FECHA_FIJA) }
@@ -295,6 +296,7 @@ fun CreateMensajeDialog(
     val datePickerDialog = DatePickerDialog(
         context,
         { _, year, month, day ->
+            // El mes en Calendar va de 0 a 11, LocalDate de 1 a 12
             val f = LocalDate.of(year, month + 1, day)
             fecha = f.toString()
         },
@@ -303,7 +305,10 @@ fun CreateMensajeDialog(
 
     val timePickerDialog = TimePickerDialog(
         context,
-        { _, h, m -> hora = String.format("%02d:%02d", h, m) },
+        { _, h, m ->
+            // Formatear siempre a dos dígitos
+            hora = String.format("%02d:%02d", h, m)
+        },
         9, 0, true
     )
 

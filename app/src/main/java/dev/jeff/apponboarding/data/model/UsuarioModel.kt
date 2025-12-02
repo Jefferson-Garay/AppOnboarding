@@ -22,44 +22,51 @@ data class UsuarioModel(
     val nivelOnboarding: NivelOnboarding?
 ) {
     /**
-     * MAGIA PURA: Reconstruye el ID de MongoDB a partir del objeto descompuesto.
-     * Si el backend envía {timestamp=..., machine=...}, esta función lo convierte
-     * de vuelta al string hexadecimal "6927eb..." que la API espera.
+     * Reconstruye el ID de MongoDB de forma SEGURA y ESTRICTA.
+     * Garantiza que el resultado sea siempre un string hexadecimal de 24 caracteres.
      */
     fun obtenerIdReal(): String {
-        // 1. Si ya es un texto simple, devolverlo
-        if (id is String) return id
-
-        // 2. Si es el objeto complejo de MongoDB (Map)
-        if (id is Map<*, *>) {
-            try {
-                // Extraemos los componentes numéricos
-                val timestamp = (id["timestamp"] as? Number)?.toInt() ?: 0
-                val machine = (id["machine"] as? Number)?.toInt() ?: 0
-                val pid = (id["pid"] as? Number)?.toInt() ?: 0
-                val increment = (id["increment"] as? Number)?.toInt() ?: 0
-
-                // Si todo es cero, no es un ID válido
-                if (timestamp == 0) return ""
-
-                // Convertimos cada parte a Hexadecimal y rellenamos con ceros (Padding)
-                // Estándar MongoDB: 8 chars tiempo + 6 chars máquina + 4 chars PID + 6 chars incremento
-                val t = "%08x".format(timestamp)
-                val m = "%06x".format(machine)
-                val p = "%04x".format(pid)
-                val i = "%06x".format(increment)
-
-                // Retornamos el ID reconstruido (ej: 6927eb71bb0b10930b593be1)
-                return (t + m + p + i).lowercase()
-            } catch (e: Exception) {
-                return ""
-            }
+        // 1. Obtener la representación cruda
+        val rawString = when (id) {
+            null -> ""
+            is String -> id
+            is Map<*, *> -> reconstruirDesdeMapa(id)
+            else -> id.toString()
         }
 
-        // 3. Intento final: convertir a string y buscar patrón hexadecimal por si acaso
-        val raw = id.toString()
+        // 2. LIMPIEZA FINAL (El paso más importante):
+        // Buscamos exactamente una secuencia de 24 caracteres hexadecimales (0-9, a-f).
+        // Esto elimina comillas, espacios o caracteres extra al final que causaban el error.
         val regex = Regex("[0-9a-fA-F]{24}")
-        return regex.find(raw)?.value ?: ""
+        return regex.find(rawString)?.value ?: ""
+    }
+
+    private fun reconstruirDesdeMapa(map: Map<*, *>): String {
+        try {
+            // Si tiene formato $oid (común en exports), usarlo directo
+            val oid = map["\$oid"] as? String
+            if (!oid.isNullOrBlank()) return oid
+
+            // Extracción de componentes numéricos con MÁSCARAS DE BITS (Safety)
+            // Usamos 'and' para evitar que números negativos generen cadenas hex demasiado largas (FFFFFFFF...)
+            val timestamp = ((map["timestamp"] as? Number)?.toInt() ?: 0)
+            val machine = ((map["machine"] as? Number)?.toInt() ?: 0) and 0xFFFFFF // Asegura máx 6 chars
+            val pid = ((map["pid"] as? Number)?.toInt() ?: 0) and 0xFFFF         // Asegura máx 4 chars
+            val increment = ((map["increment"] as? Number)?.toInt() ?: 0) and 0xFFFFFF // Asegura máx 6 chars
+
+            // Si todo es cero, el objeto está vacío o inválido
+            if (timestamp == 0) return ""
+
+            // Formateo estricto
+            val t = "%08x".format(timestamp)
+            val m = "%06x".format(machine)
+            val p = "%04x".format(pid)
+            val i = "%06x".format(increment)
+
+            return (t + m + p + i).lowercase()
+        } catch (e: Exception) {
+            return ""
+        }
     }
 }
 

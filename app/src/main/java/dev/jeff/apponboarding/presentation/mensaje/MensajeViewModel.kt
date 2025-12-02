@@ -42,10 +42,9 @@ class MensajeViewModel : ViewModel() {
             _isLoading.value = true
             try {
                 val usuarios = usuarioRepository.getUsuarios()
-                // Filtramos para no mostrarnos a nosotros mismos si somos admin, o mostrar todos
                 _empleadosState.value = usuarios
             } catch (e: Exception) {
-                // Manejo de error silencioso al estilo "no pasó nada"
+                // Silencioso
             } finally {
                 _isLoading.value = false
             }
@@ -55,10 +54,14 @@ class MensajeViewModel : ViewModel() {
     // Seleccionar un usuario y cargar sus mensajes
     fun selectUsuario(usuario: UsuarioModel) {
         _selectedUsuario.value = usuario
-        // Usamos obtenerIdReal() por si el ID viene raro de Mongo
         val idReal = usuario.obtenerIdReal()
-        if (idReal.isNotBlank()) {
+
+        if (idReal.length == 24) {
             loadMensajes(idReal)
+        } else {
+            // Feedback inmediato si el ID está corrupto
+            _mensajesState.value = emptyList()
+            // No mostramos error invasivo aquí, solo en el log o si intenta crear
         }
     }
 
@@ -88,12 +91,20 @@ class MensajeViewModel : ViewModel() {
         condicion: CondicionActivacion
     ) {
         val usuarioActual = _selectedUsuario.value
-        val usuarioRef = usuarioActual?.obtenerIdReal() ?: return
+        val usuarioRef = usuarioActual?.obtenerIdReal()
+
+        // VALIDACIÓN ESTRICTA DEL ID ANTES DE ENVIAR
+        if (usuarioRef.isNullOrBlank() || usuarioRef.length != 24) {
+            _opSuccess.value = "Error: ID de usuario inválido (${usuarioRef?.length ?: 0} caracteres). Contacte soporte."
+            return
+        }
 
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val fechaIso = "${fecha}T${hora}:00"
+                // Aseguramos formato ISO con segundos: yyyy-MM-ddTHH:mm:00
+                val horaLimpia = if (hora.count { it == ':' } == 1) "$hora:00" else hora
+                val fechaIso = "${fecha}T${horaLimpia}"
 
                 val nuevoMensaje = MensajeProgramadoModel(
                     titulo = titulo,
@@ -104,12 +115,13 @@ class MensajeViewModel : ViewModel() {
                     condicionActivacion = condicion
                 )
 
-                val success = repository.crearMensaje(nuevoMensaje, usuarioRef)
-                if (success) {
+                val errorMsg = repository.crearMensaje(nuevoMensaje, usuarioRef)
+
+                if (errorMsg == null) {
                     _opSuccess.value = "Mensaje programado para ${usuarioActual.nombre}"
                     loadMensajes(usuarioRef)
                 } else {
-                    _opSuccess.value = "Error al guardar el mensaje"
+                    _opSuccess.value = "Fallo: $errorMsg"
                 }
             } catch (e: Exception) {
                 _opSuccess.value = "Error inesperado: ${e.message}"

@@ -3,6 +3,7 @@ package dev.jeff.apponboarding.data.repository
 import android.util.Log
 import dev.jeff.apponboarding.data.model.*
 import dev.jeff.apponboarding.data.remote.RetrofitInstance
+import retrofit2.HttpException
 
 class MensajeRepository {
 
@@ -16,8 +17,6 @@ class MensajeRepository {
             actividades.filter { it.tipo.startsWith("MSG_") }
                 .map { actividad ->
                     MensajeProgramadoModel(
-                        // IMPORTANTE: Usamos el ID del backend (actividad.id)
-                        // Si es nulo, no podremos borrarlo, así que cuidado
                         id = actividad.id ?: "",
                         titulo = actividad.titulo,
                         descripcion = actividad.descripcion,
@@ -34,15 +33,18 @@ class MensajeRepository {
         }
     }
 
-    // Crear mensaje (Guardándolo como Actividad)
-    suspend fun crearMensaje(mensaje: MensajeProgramadoModel, usuarioRef: String): Boolean {
+    /**
+     * Crear mensaje.
+     * Retorna un String? -> NULL si fue exitoso, o el MENSAJE DE ERROR si falló.
+     */
+    suspend fun crearMensaje(mensaje: MensajeProgramadoModel, usuarioRef: String): String? {
         return try {
             val tipoString = if (mensaje.tipo == TipoMensaje.PROACTIVO) "MSG_PROACTIVO" else "MSG_RECORDATORIO"
 
             val actividadRequest = ActividadRequest(
                 titulo = mensaje.titulo,
                 descripcion = mensaje.descripcion,
-                tipo = tipoString, // MARCA ESPECIAL
+                tipo = tipoString,
                 fechaInicio = mensaje.fechaProgramada,
                 fechaFin = mensaje.fechaProgramada,
                 usuarioRef = usuarioRef,
@@ -50,10 +52,15 @@ class MensajeRepository {
             )
 
             val response = api.createActividad(actividadRequest)
-            response != null
+            if (response != null) null else "Error desconocido al crear" // Éxito retorna null
+
+        } catch (e: HttpException) {
+            val errorBody = e.response()?.errorBody()?.string() ?: "Error HTTP ${e.code()}"
+            Log.e("MENSAJE_REPO", "Error HTTP: $errorBody")
+            "Error del servidor: $errorBody"
         } catch (e: Exception) {
-            Log.e("MENSAJE_REPO", "Error creando mensaje: ${e.message}")
-            false
+            Log.e("MENSAJE_REPO", "Excepción creando mensaje: ${e.message}")
+            "Error de conexión: ${e.message}"
         }
     }
 
@@ -62,7 +69,6 @@ class MensajeRepository {
         if (id.isBlank()) return false
 
         return try {
-            // La API de Actividad devuelve un mapa o void, solo nos importa que no lance error 404/500
             api.deleteActividad(id)
             true
         } catch (e: Exception) {
