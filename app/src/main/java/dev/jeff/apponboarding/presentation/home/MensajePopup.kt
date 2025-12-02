@@ -1,6 +1,5 @@
 package dev.jeff.apponboarding.presentation.home
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,8 +24,8 @@ fun MensajePopup(
     mensaje: ActividadModel,
     onDismiss: () -> Unit
 ) {
-    // Temporizador de 5 segundos
-    LaunchedEffect(mensaje.id) { // Key única para reiniciar si cambia el mensaje
+    // Temporizador de 5 segundos que se reinicia si cambia el ID del mensaje
+    LaunchedEffect(mensaje.id) {
         delay(5000)
         onDismiss()
     }
@@ -34,11 +33,8 @@ fun MensajePopup(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 8.dp)
+            .padding(start = 16.dp, end = 16.dp, top = 16.dp) // Un poco más de margen superior
             .shadow(8.dp, RoundedCornerShape(16.dp)),
-        // Quitamos el clickable general para evitar toques accidentales masivos
-        // Si quieres que toda la tarjeta cierre, descomenta la siguiente línea:
-        // .clickable { onDismiss() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(8.dp)
@@ -84,7 +80,7 @@ fun MensajePopup(
                         modifier = Modifier.weight(1f)
                     )
 
-                    // BOTÓN DE CIERRE EXPLÍCITO
+                    // Botón de cierre manual
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier.size(24.dp)
@@ -104,7 +100,7 @@ fun MensajePopup(
                     text = mensaje.descripcion,
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF49454F),
-                    maxLines = 2,
+                    maxLines = 3, // Permitir un poco más de texto
                     overflow = TextOverflow.Ellipsis
                 )
 

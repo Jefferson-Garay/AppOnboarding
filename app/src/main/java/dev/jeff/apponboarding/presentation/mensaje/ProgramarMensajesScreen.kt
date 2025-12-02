@@ -2,7 +2,6 @@ package dev.jeff.apponboarding.presentation.mensaje
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
-import android.widget.DatePicker
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,22 +30,26 @@ fun ProgramarMensajesScreen(
     onNavigateBack: () -> Unit
 ) {
     val viewModel = remember { MensajeViewModel() }
+
     val mensajes by viewModel.mensajesState.collectAsState()
+    val empleados by viewModel.empleadosState.collectAsState()
+    val selectedUsuario by viewModel.selectedUsuario.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val successMessage by viewModel.opSuccess.collectAsState()
 
     var showCreateDialog by remember { mutableStateOf(false) }
-
-    LaunchedEffect(usuarioRef) {
-        viewModel.loadMensajes(usuarioRef)
-    }
+    var expandedEmpleado by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
+
     LaunchedEffect(successMessage) {
         successMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearSuccessMessage()
-            showCreateDialog = false
+            // Solo cerramos el diálogo si fue un mensaje de éxito, no de error
+            if (!it.contains("Error") && !it.contains("Fallo")) {
+                showCreateDialog = false
+            }
         }
     }
 
@@ -64,43 +67,114 @@ fun ProgramarMensajesScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showCreateDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Nuevo", tint = Color.White)
+            if (selectedUsuario != null) {
+                FloatingActionButton(
+                    onClick = { showCreateDialog = true },
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Nuevo", tint = Color.White)
+                }
             }
         }
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .background(Color(0xFFF5F5F5))
+                .padding(16.dp)
         ) {
-            if (isLoading && mensajes.isEmpty()) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else {
+
+            // --- SELECTOR DE EMPLEADO ---
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(2.dp)
+            ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Historial de Mensajes",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        text = "Seleccionar Empleado",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.Gray
                     )
+                    Spacer(Modifier.height(8.dp))
 
-                    if (mensajes.isEmpty()) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("No hay mensajes programados.", color = Color.Gray)
-                        }
-                    } else {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(mensajes) { mensaje ->
-                                MensajeItemCard(
-                                    mensaje = mensaje,
-                                    onDelete = { viewModel.eliminarMensaje(mensaje.id, usuarioRef) }
+                    ExposedDropdownMenuBox(
+                        expanded = expandedEmpleado,
+                        onExpandedChange = { expandedEmpleado = !expandedEmpleado }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedUsuario?.nombre ?: "Seleccione un empleado...",
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedEmpleado) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = Color.LightGray
+                            )
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = expandedEmpleado,
+                            onDismissRequest = { expandedEmpleado = false }
+                        ) {
+                            empleados.forEach { empleado ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(empleado.nombre, fontWeight = FontWeight.Bold)
+                                            Text(empleado.correo, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                        }
+                                    },
+                                    onClick = {
+                                        viewModel.selectUsuario(empleado)
+                                        expandedEmpleado = false
+                                    }
                                 )
                             }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // --- LISTA DE MENSAJES ---
+            if (isLoading) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (selectedUsuario == null) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        "Selecciona un empleado para ver sus mensajes",
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            } else {
+                Text(
+                    text = "Historial de Mensajes para ${selectedUsuario!!.nombre}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                if (mensajes.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No hay mensajes programados para este usuario.", color = Color.Gray)
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 80.dp)
+                    ) {
+                        items(mensajes) { mensaje ->
+                            MensajeItemCard(
+                                mensaje = mensaje,
+                                onDelete = { viewModel.eliminarMensaje(mensaje.id) }
+                            )
                         }
                     }
                 }
@@ -112,7 +186,7 @@ fun ProgramarMensajesScreen(
         CreateMensajeDialog(
             onDismiss = { showCreateDialog = false },
             onConfirm = { t, d, tipo, f, h, c, cond ->
-                viewModel.crearMensaje(t, d, tipo, f, h, c, cond, usuarioRef)
+                viewModel.crearMensaje(t, d, tipo, f, h, c, cond)
             }
         )
     }
@@ -123,6 +197,8 @@ fun MensajeItemCard(
     mensaje: MensajeProgramadoModel,
     onDelete: () -> Unit
 ) {
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -159,7 +235,8 @@ fun MensajeItemCard(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Event, null, modifier = Modifier.size(14.dp), tint = Color.Gray)
@@ -170,11 +247,31 @@ fun MensajeItemCard(
                         color = Color.Gray
                     )
                 }
-                IconButton(onClick = onDelete) {
+                IconButton(onClick = { showDeleteConfirm = true }) {
                     Icon(Icons.Default.Delete, "Eliminar", tint = Color.Red)
                 }
             }
         }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Eliminar Mensaje") },
+            text = { Text("¿Estás seguro? El empleado ya no verá este mensaje.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDelete()
+                        showDeleteConfirm = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Eliminar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancelar") }
+            }
+        )
     }
 }
 
@@ -187,6 +284,8 @@ fun CreateMensajeDialog(
     var titulo by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
     var tipo by remember { mutableStateOf(TipoMensaje.RECORDATORIO) }
+
+    // Por defecto hoy, pero cuidado si el backend exige fecha futura
     var fecha by remember { mutableStateOf(LocalDate.now().toString()) }
     var hora by remember { mutableStateOf("09:00") }
     var condicion by remember { mutableStateOf(CondicionActivacion.FECHA_FIJA) }
@@ -196,13 +295,20 @@ fun CreateMensajeDialog(
 
     val datePickerDialog = DatePickerDialog(
         context,
-        { _, year, month, day -> fecha = LocalDate.of(year, month + 1, day).toString() },
+        { _, year, month, day ->
+            // El mes en Calendar va de 0 a 11, LocalDate de 1 a 12
+            val f = LocalDate.of(year, month + 1, day)
+            fecha = f.toString()
+        },
         calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
     )
 
     val timePickerDialog = TimePickerDialog(
         context,
-        { _, h, m -> hora = String.format("%02d:%02d", h, m) },
+        { _, h, m ->
+            // Formatear siempre a dos dígitos
+            hora = String.format("%02d:%02d", h, m)
+        },
         9, 0, true
     )
 
@@ -215,15 +321,31 @@ fun CreateMensajeDialog(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Nuevo Mensaje", style = MaterialTheme.typography.titleMedium)
+                Text("Nuevo Mensaje Proactivo", style = MaterialTheme.typography.titleMedium)
 
-                OutlinedTextField(value = titulo, onValueChange = { titulo = it }, label = { Text("Título") })
-                OutlinedTextField(value = descripcion, onValueChange = { descripcion = it }, label = { Text("Descripción") })
+                OutlinedTextField(
+                    value = titulo,
+                    onValueChange = { titulo = it },
+                    label = { Text("Título") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = descripcion,
+                    onValueChange = { descripcion = it },
+                    label = { Text("Descripción") },
+                    maxLines = 3
+                )
+
+                Text("Programación:", style = MaterialTheme.typography.labelMedium)
 
                 Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                    Button(onClick = { datePickerDialog.show() }, modifier = Modifier.weight(1f)) { Text(fecha) }
+                    OutlinedButton(onClick = { datePickerDialog.show() }, modifier = Modifier.weight(1f)) {
+                        Text(fecha)
+                    }
                     Spacer(Modifier.width(8.dp))
-                    Button(onClick = { timePickerDialog.show() }, modifier = Modifier.weight(1f)) { Text(hora) }
+                    OutlinedButton(onClick = { timePickerDialog.show() }, modifier = Modifier.weight(1f)) {
+                        Text(hora)
+                    }
                 }
 
                 Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {

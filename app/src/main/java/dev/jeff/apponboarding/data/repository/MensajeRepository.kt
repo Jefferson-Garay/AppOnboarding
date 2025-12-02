@@ -33,15 +33,18 @@ class MensajeRepository {
         }
     }
 
-    // Crear mensaje (Guardándolo como Actividad)
-    suspend fun crearMensaje(mensaje: MensajeProgramadoModel, usuarioRef: String): Boolean {
+    /**
+     * Crear mensaje.
+     * Retorna un String? -> NULL si fue exitoso, o el MENSAJE DE ERROR si falló.
+     */
+    suspend fun crearMensaje(mensaje: MensajeProgramadoModel, usuarioRef: String): String? {
         return try {
             val tipoString = if (mensaje.tipo == TipoMensaje.PROACTIVO) "MSG_PROACTIVO" else "MSG_RECORDATORIO"
 
             val actividadRequest = ActividadRequest(
                 titulo = mensaje.titulo,
                 descripcion = mensaje.descripcion,
-                tipo = tipoString, // MARCA ESPECIAL
+                tipo = tipoString,
                 fechaInicio = mensaje.fechaProgramada,
                 fechaFin = mensaje.fechaProgramada,
                 usuarioRef = usuarioRef,
@@ -49,19 +52,27 @@ class MensajeRepository {
             )
 
             val response = api.createActividad(actividadRequest)
-            response != null
+            if (response != null) null else "Error desconocido al crear" // Éxito retorna null
+
+        } catch (e: HttpException) {
+            val errorBody = e.response()?.errorBody()?.string() ?: "Error HTTP ${e.code()}"
+            Log.e("MENSAJE_REPO", "Error HTTP: $errorBody")
+            "Error del servidor: $errorBody"
         } catch (e: Exception) {
-            Log.e("MENSAJE_REPO", "Error creando mensaje: ${e.message}")
-            false
+            Log.e("MENSAJE_REPO", "Excepción creando mensaje: ${e.message}")
+            "Error de conexión: ${e.message}"
         }
     }
 
     // Eliminar mensaje
     suspend fun deleteMensaje(id: String): Boolean {
+        if (id.isBlank()) return false
+
         return try {
             api.deleteActividad(id)
             true
         } catch (e: Exception) {
+            Log.e("MENSAJE_REPO", "Error al borrar mensaje $id: ${e.message}")
             false
         }
     }
@@ -70,7 +81,7 @@ class MensajeRepository {
         return when (estadoBd.uppercase()) {
             "PENDIENTE" -> EstadoMensaje.PENDIENTE
             "ENVIADO" -> EstadoMensaje.ENVIADO
-            "COMPLETADA" -> EstadoMensaje.COMPLETADO
+            "COMPLETADA", "VISTO" -> EstadoMensaje.COMPLETADO
             else -> EstadoMensaje.PENDIENTE
         }
     }
