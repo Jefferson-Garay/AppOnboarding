@@ -3,14 +3,20 @@ package dev.jeff.apponboarding.data.model
 import com.google.gson.annotations.SerializedName
 
 data class UsuarioModel(
-    // Aceptamos Any? porque el backend a veces manda String y a veces un Objeto complejo
     @SerializedName("id", alternate = ["_id"])
     val id: Any?,
     val nombre: String,
     val correo: String,
     val passwordHash: String?,
     val area: String?,
+
+    // este se usa cuando viene de GET /api/Usuario
     val rolRef: String?,
+
+    // este se usa cuando viene de POST /api/Usuario/login
+    @SerializedName("rol")
+    val rolNombre: String? = null,
+
     val telefono: String?,
     val estado: String?,
     val nivelOnboarding: NivelOnboarding?

@@ -12,7 +12,8 @@ import dev.jeff.apponboarding.presentation.auth.LoginState
 import dev.jeff.apponboarding.presentation.auth.LoginViewModel
 import dev.jeff.apponboarding.presentation.ayuda.AyudaScreen
 import dev.jeff.apponboarding.presentation.chat.*
-import dev.jeff.apponboarding.presentation.home.HomeScreen
+import dev.jeff.apponboarding.presentation.home.HomeEmpleadoScreen  // ⭐ NUEVO
+import dev.jeff.apponboarding.presentation.home.HomeAdminScreen     // ⭐ NUEVO
 import dev.jeff.apponboarding.presentation.mensaje.ProgramarMensajesScreen
 import dev.jeff.apponboarding.presentation.recurso.*
 import dev.jeff.apponboarding.presentation.rol.*
@@ -35,45 +36,55 @@ fun AppNavGraph() {
     val usuarioViewModel = remember { UsuarioViewModel() }
 
     var currentUser by remember { mutableStateOf<UsuarioModel?>(null) }
-
-    // Estado del tema oscuro
     var isDarkTheme by remember { mutableStateOf(false) }
 
     val loginState by loginViewModel.loginState.collectAsState()
 
+    // ⭐ ACTUALIZADO: Actualizar currentUser cuando hay éxito en login
     LaunchedEffect(loginState) {
         if (loginState is LoginState.Success) {
             currentUser = (loginState as LoginState.Success).user as? UsuarioModel
         }
     }
 
+    // ⭐ NUEVO: Función helper para verificar si es admin
+    fun esAdministrador(usuario: UsuarioModel?): Boolean {
+        val rolId = usuario?.rolRef ?: return false
+        return rolId == "6913adbcca79acfd93858d5c" ||
+                rolId.contains("admin", ignoreCase = true)
+    }
+
     NavHost(navController = navController, startDestination = "login") {
 
+        // ⭐ ACTUALIZADO: Login con navegación basada en rol
         composable("login") {
             LoginScreen(
                 viewModel = loginViewModel,
-                onLoginSuccess = {
-                    navController.navigate("home") {
+                onLoginSuccessEmpleado = {
+                    navController.navigate("home_empleado") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                },
+                onLoginSuccessAdmin = {
+                    navController.navigate("home_admin") {
                         popUpTo("login") { inclusive = true }
                     }
                 }
             )
         }
 
-        composable("home") {
-            HomeScreen(
+        // ⭐ NUEVO: Home para EMPLEADO
+        composable("home_empleado") {
+            HomeEmpleadoScreen(
                 usuario = currentUser,
                 actividadViewModel = actividadViewModel,
                 onNavigateToActividades = { navController.navigate("actividades") },
                 onNavigateToRecursos = { navController.navigate("recursos") },
-                onNavigateToRoles = { navController.navigate("roles") },
                 onNavigateToChat = { navController.navigate("chat") },
                 onNavigateToSupervisor = { navController.navigate("supervisor") },
                 onNavigateToAyuda = { navController.navigate("ayuda") },
-                onNavigateToMensajes = { navController.navigate("mensajes") },
                 onNavigateToConfiguracion = { navController.navigate("configuracion") },
                 onNavigateToPerfil = { navController.navigate("perfil") },
-                onNavigateToUsuarios = { navController.navigate("usuarios") },
                 onNavigateToActividadDetail = { actividadId ->
                     navController.navigate("actividades/detail/$actividadId")
                 },
@@ -81,13 +92,33 @@ fun AppNavGraph() {
                     currentUser = null
                     loginViewModel.resetLoginState()
                     navController.navigate("login") {
-                        popUpTo("home") { inclusive = true }
+                        popUpTo("home_empleado") { inclusive = true }
                     }
                 }
             )
         }
 
-        // === RUTA DE CONFIGURACIÓN ===
+        // ⭐ NUEVO: Home para ADMINISTRADOR
+        composable("home_admin") {
+            HomeAdminScreen(
+                usuario = currentUser,
+                usuarioViewModel = usuarioViewModel,
+                onNavigateToMensajes = { navController.navigate("mensajes") },
+                onNavigateToRoles = { navController.navigate("roles") },
+                onNavigateToUsuarios = { navController.navigate("usuarios") },
+                onNavigateToConfiguracion = { navController.navigate("configuracion") },
+                onNavigateToPerfil = { navController.navigate("perfil") },
+                onLogout = {
+                    currentUser = null
+                    loginViewModel.resetLoginState()
+                    navController.navigate("login") {
+                        popUpTo("home_admin") { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // ===== PANTALLAS COMPARTIDAS =====
 
         composable("configuracion") {
             ConfiguracionScreen(
@@ -95,7 +126,16 @@ fun AppNavGraph() {
                 isDarkTheme = isDarkTheme,
                 onToggleDarkTheme = { isDarkTheme = it },
                 onNavigateBack = {
-                    navController.popBackStack()
+                    // ⭐ Volver al home correcto según rol
+                    if (esAdministrador(currentUser)) {
+                        navController.navigate("home_admin") {
+                            popUpTo("configuracion") { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate("home_empleado") {
+                            popUpTo("configuracion") { inclusive = true }
+                        }
+                    }
                 }
             )
         }
@@ -115,12 +155,71 @@ fun AppNavGraph() {
             )
         }
 
+        // ===== PANTALLAS SOLO ADMIN =====
+
         composable("mensajes") {
             ProgramarMensajesScreen(
                 usuarioRef = currentUser?.id?.toString() ?: "",
                 onNavigateBack = { navController.popBackStack() }
             )
         }
+
+        composable("roles") {
+            RolesListScreen(
+                viewModel = rolViewModel,
+                onNavigateToCreate = { navController.navigate("roles/create") },
+                onNavigateToDetail = { id -> navController.navigate("roles/detail/$id") }
+            )
+        }
+
+        composable("roles/create") {
+            CreateRolScreen(
+                viewModel = rolViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "roles/detail/{rolId}",
+            arguments = listOf(navArgument("rolId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val rolId = backStackEntry.arguments?.getString("rolId") ?: ""
+            RolDetailScreen(
+                rolId = rolId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEdit = { navController.popBackStack() }
+            )
+        }
+
+        composable("usuarios") {
+            UsuariosListScreen(
+                viewModel = usuarioViewModel,
+                onNavigateToCreate = { navController.navigate("usuarios/create") },
+                onNavigateToEdit = { id -> navController.navigate("usuarios/edit/$id") }
+            )
+        }
+
+        composable("usuarios/create") {
+            UsuarioDetailScreen(
+                viewModel = usuarioViewModel,
+                usuarioId = null,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "usuarios/edit/{userId}",
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId")
+            UsuarioDetailScreen(
+                viewModel = usuarioViewModel,
+                usuarioId = userId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // ===== PANTALLAS SOLO EMPLEADO =====
 
         composable("supervisor") {
             MiSupervisorScreen(
@@ -199,61 +298,6 @@ fun AppNavGraph() {
             val recursoId = backStackEntry.arguments?.getString("recursoId") ?: ""
             RecursoDetailScreen(
                 recursoId = recursoId,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("roles") {
-            RolesListScreen(
-                viewModel = rolViewModel,
-                onNavigateToCreate = { navController.navigate("roles/create") },
-                onNavigateToDetail = { id -> navController.navigate("roles/detail/$id") }
-            )
-        }
-
-        composable("roles/create") {
-            CreateRolScreen(
-                viewModel = rolViewModel,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = "roles/detail/{rolId}",
-            arguments = listOf(navArgument("rolId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val rolId = backStackEntry.arguments?.getString("rolId") ?: ""
-            RolDetailScreen(
-                rolId = rolId,
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToEdit = { navController.popBackStack() }
-            )
-        }
-
-        composable("usuarios") {
-            UsuariosListScreen(
-                viewModel = usuarioViewModel,
-                onNavigateToCreate = { navController.navigate("usuarios/create") },
-                onNavigateToEdit = { id -> navController.navigate("usuarios/edit/$id") }
-            )
-        }
-
-        composable("usuarios/create") {
-            UsuarioDetailScreen(
-                viewModel = usuarioViewModel,
-                usuarioId = null,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = "usuarios/edit/{userId}",
-            arguments = listOf(navArgument("userId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId")
-            UsuarioDetailScreen(
-                viewModel = usuarioViewModel,
-                usuarioId = userId,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

@@ -1,10 +1,6 @@
 package dev.jeff.apponboarding.presentation.home
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,13 +18,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.jeff.apponboarding.data.model.UsuarioModel
 import dev.jeff.apponboarding.presentation.actividad.ActividadViewModel
 import dev.jeff.apponboarding.presentation.actividad.ActividadesState
 import dev.jeff.apponboarding.presentation.notificaciones.NotificacionesDrawer
 import kotlinx.coroutines.launch
+import dev.jeff.apponboarding.presentation.home.DrawerMenuItem
+import dev.jeff.apponboarding.presentation.home.QuickAccessCard
+import dev.jeff.apponboarding.presentation.home.MensajePopup
 
+
+// Colores consistentes con HomeScreen
 private val ColorFondoApp = Color(0xFFFFFFFF)
 private val ColorCardBienvenida = Color(0xFFEBE8F2)
 private val ColorCardNotificacion = Color(0xFFFFDAD6)
@@ -40,26 +40,16 @@ private val ColorCardAccesos = Color(0xFFEBE8F2)
 private val ColorIconoAccesos = Color(0xFF5E5375)
 private val ColorAvatar = Color(0xFF6750A4)
 
-data class DrawerMenuItem(
-    val id: String,
-    val title: String,
-    val icon: ImageVector,
-    val selectedIcon: ImageVector = icon
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(
+fun HomeEmpleadoScreen(
     usuario: UsuarioModel?,
     actividadViewModel: ActividadViewModel,
     onNavigateToActividades: () -> Unit,
     onNavigateToRecursos: () -> Unit,
-    onNavigateToRoles: () -> Unit,
     onNavigateToChat: () -> Unit,
     onNavigateToSupervisor: () -> Unit,
     onNavigateToAyuda: () -> Unit,
-    onNavigateToMensajes: () -> Unit,
-    onNavigateToUsuarios: () -> Unit,
     onNavigateToConfiguracion: () -> Unit,
     onNavigateToPerfil: () -> Unit,
     onNavigateToActividadDetail: (String) -> Unit,
@@ -69,7 +59,6 @@ fun HomeScreen(
     val notificacionesDrawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var selectedItem by remember { mutableStateOf("inicio") }
-    var isDarkTheme by remember { mutableStateOf(false) }
 
     val pendientesCount by actividadViewModel.pendientesCount.collectAsState()
     val actividadesState by actividadViewModel.actividadesState.collectAsState()
@@ -82,6 +71,7 @@ fun HomeScreen(
         }
     }
 
+    // Cálculos de progreso (igual que HomeScreen)
     val listaTareasReales = when (val state = actividadesState) {
         is ActividadesState.Success -> state.actividades
         else -> emptyList()
@@ -103,15 +93,13 @@ fun HomeScreen(
         etapaDinamica
     }
 
+    // ⭐ MENÚ REDUCIDO PARA EMPLEADO (8 opciones)
     val menuItems = listOf(
         DrawerMenuItem("inicio", "Inicio", Icons.Outlined.Home, Icons.Filled.Home),
         DrawerMenuItem("chat", "Asistente Virtual", Icons.Outlined.Chat, Icons.Filled.Chat),
-        DrawerMenuItem("mensajes", "Automatización", Icons.Outlined.ScheduleSend, Icons.Filled.ScheduleSend),
         DrawerMenuItem("supervisor", "Mi Supervisor", Icons.Outlined.SupervisorAccount, Icons.Filled.SupervisorAccount),
         DrawerMenuItem("actividades", "Mis Actividades", Icons.Outlined.Assignment, Icons.Filled.Assignment),
         DrawerMenuItem("recursos", "Recursos", Icons.Outlined.Folder, Icons.Filled.Folder),
-        DrawerMenuItem("roles", "Gestionar Roles", Icons.Outlined.Security, Icons.Filled.Security),
-        DrawerMenuItem("usuarios", "Gestionar Empleados", Icons.Outlined.People, Icons.Filled.People),
         DrawerMenuItem("perfil", "Mi Información", Icons.Outlined.Person, Icons.Filled.Person),
         DrawerMenuItem("ayuda", "Ayuda", Icons.Outlined.Help, Icons.Filled.Help),
         DrawerMenuItem("configuracion", "Configuración", Icons.Outlined.Settings, Icons.Filled.Settings)
@@ -156,6 +144,8 @@ fun HomeScreen(
                         }
                     }
                     Spacer(Modifier.height(8.dp))
+
+                    // ⭐ MENÚ PARA EMPLEADO
                     menuItems.forEach { item ->
                         NavigationDrawerItem(
                             label = { Text(item.title, color = Color.White) },
@@ -166,12 +156,9 @@ fun HomeScreen(
                                 scope.launch { drawerState.close() }
                                 when (item.id) {
                                     "chat" -> onNavigateToChat()
-                                    "mensajes" -> onNavigateToMensajes()
                                     "supervisor" -> onNavigateToSupervisor()
                                     "actividades" -> onNavigateToActividades()
                                     "recursos" -> onNavigateToRecursos()
-                                    "roles" -> onNavigateToRoles()
-                                    "usuarios" -> onNavigateToUsuarios()
                                     "ayuda" -> onNavigateToAyuda()
                                     "configuracion" -> onNavigateToConfiguracion()
                                     "perfil" -> onNavigateToPerfil()
@@ -209,7 +196,7 @@ fun HomeScreen(
                                     }
                                 }
                                 Spacer(Modifier.width(8.dp))
-                                Text("TCS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                Text("TCS - Empleado", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             }
                         },
                         navigationIcon = {
@@ -234,9 +221,6 @@ fun HomeScreen(
                                     Icon(Icons.Default.Notifications, "Notificaciones")
                                 }
                             }
-                            IconButton(onClick = { isDarkTheme = !isDarkTheme }) {
-                                Icon(Icons.Default.DarkMode, "Tema")
-                            }
                             IconButton(onClick = onLogout) {
                                 Icon(Icons.Default.ExitToApp, "Salir")
                             }
@@ -258,6 +242,7 @@ fun HomeScreen(
                     ) {
                         Spacer(Modifier.height(4.dp))
 
+                        // Card Bienvenida
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
@@ -278,6 +263,7 @@ fun HomeScreen(
                             }
                         }
 
+                        // Card Notificaciones (si hay)
                         if (pendientesCount > 0) {
                             Card(
                                 modifier = Modifier.fillMaxWidth().clickable {
@@ -301,6 +287,7 @@ fun HomeScreen(
                             }
                         }
 
+                        // Card Progreso
                         Card(
                             modifier = Modifier.fillMaxWidth().clickable { onNavigateToActividades() },
                             shape = RoundedCornerShape(16.dp),
@@ -323,6 +310,7 @@ fun HomeScreen(
                             }
                         }
 
+                        // Accesos Rápidos
                         Text(text = "Accesos Rápidos", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             QuickAccessCard(modifier = Modifier.weight(1f), icon = Icons.Default.ChatBubble, title = "Asistente", onClick = onNavigateToChat)
@@ -332,6 +320,7 @@ fun HomeScreen(
 
                         Spacer(Modifier.weight(1f))
 
+                        // Card Info Contacto
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
@@ -344,7 +333,7 @@ fun HomeScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Email, null, modifier = Modifier.size(16.dp), tint = Color.Black)
                                     Spacer(Modifier.width(8.dp))
-                                    Text(text = usuario?.correo ?: "jeff@gmail.com", style = MaterialTheme.typography.bodySmall)
+                                    Text(text = usuario?.correo ?: "correo@tcs.com", style = MaterialTheme.typography.bodySmall)
                                 }
                                 if (usuario?.telefono != null) {
                                     Spacer(Modifier.height(4.dp))
@@ -358,71 +347,23 @@ fun HomeScreen(
                         }
                     }
 
-                    AnimatedVisibility(
+                    // Popup animado
+                    androidx.compose.animation.AnimatedVisibility(
                         visible = mensajePopup != null,
-                        enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
-                        exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+                        enter = androidx.compose.animation.slideInVertically(initialOffsetY = { -it }) + androidx.compose.animation.fadeIn(),
+                        exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { -it }) + androidx.compose.animation.fadeOut(),
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .fillMaxWidth()
                     ) {
                         mensajePopup?.let { msg ->
                             MensajePopup(
-                                mensaje = msg,
+                                mensaje = msg.titulo,
                                 onDismiss = { actividadViewModel.marcarMensajeVisto(msg) }
                             )
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun QuickAccessCard(modifier: Modifier = Modifier, icon: ImageVector, title: String, onClick: () -> Unit) {
-    Card(
-        modifier = modifier.aspectRatio(1f).clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = ColorCardAccesos),
-        elevation = CardDefaults.cardElevation(0.dp)
-    ) {
-        Column(modifier = Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Icon(imageVector = icon, contentDescription = title, modifier = Modifier.size(32.dp), tint = ColorIconoAccesos)
-            Spacer(Modifier.height(8.dp))
-            Text(text = title, style = MaterialTheme.typography.labelMedium, color = Color.Black)
-        }
-    }
-}
-
-@Composable
-fun MensajePopup(
-    mensaje: String,
-    onDismiss: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = mensaje,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, contentDescription = "Cerrar")
             }
         }
     }
