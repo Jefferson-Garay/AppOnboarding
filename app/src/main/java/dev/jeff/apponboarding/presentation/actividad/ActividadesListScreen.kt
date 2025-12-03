@@ -18,14 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.jeff.apponboarding.data.model.ActividadModel
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
-// Colores locales si no importas el Theme
+// Colores locales
 private val AzulOscuro = Color(0xFF0D1B3E)
 private val VerdeExito = Color(0xFF4CAF50)
 private val FondoGris = Color(0xFFF5F5F5)
@@ -57,10 +56,10 @@ fun ActividadesListScreen(
         ) {
             when (val currentState = state) {
                 is ActividadesState.Success -> {
-                    // --- FIX: FILTRAR MENSAJES OCULTOS ---
-                    // Ignoramos cualquier actividad cuyo tipo empiece con "MSG_"
+                    // Filtrar mensajes ocultos
                     val actividadesReales = currentState.actividades.filter { !it.tipo.startsWith("MSG_") }
 
+                    // Header de progreso (NO MODIFICADO)
                     ProgressHeader(actividades = actividadesReales)
 
                     // Chips de Filtro
@@ -107,7 +106,15 @@ fun ActividadesListScreen(
                                 ActividadCard(
                                     actividad = actividad,
                                     onToggle = {
-                                        val nuevoEstado = if (actividad.estado.equals("Completada", ignoreCase = true)) "Pendiente" else "Completada"
+                                        // LOGICA DE CAMBIO DE ESTADO (MODIFICADA PARA FUNCIONALIDAD)
+                                        // Si ya está completada -> pasa a Pendiente
+                                        // Si está en cualquier otro estado -> pasa a Completada
+                                        val nuevoEstado = if (actividad.estado.equals("Completada", ignoreCase = true)) {
+                                            "Pendiente"
+                                        } else {
+                                            "Completada"
+                                        }
+                                        // Llamar al ViewModel para actualizar API y recargar lista
                                         viewModel.cambiarEstadoActividad(actividad.id ?: "", actividad, nuevoEstado, usuarioRef)
                                     },
                                     onClick = { onNavigateToDetail(actividad.id ?: "") }
@@ -181,6 +188,7 @@ private fun ProgressHeader(actividades: List<ActividadModel>) {
 
 @Composable
 private fun ActividadCard(actividad: ActividadModel, onToggle: () -> Unit, onClick: () -> Unit) {
+    // Determinar si está completada para marcar el checkbox
     val isCompleted = actividad.estado.equals("Completada", ignoreCase = true)
 
     Card(
@@ -190,6 +198,7 @@ private fun ActividadCard(actividad: ActividadModel, onToggle: () -> Unit, onCli
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
+            // El Checkbox ejecuta onToggle cuando se presiona
             Checkbox(
                 checked = isCompleted,
                 onCheckedChange = { onToggle() },
