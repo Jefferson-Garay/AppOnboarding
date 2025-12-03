@@ -38,6 +38,7 @@ private val ColorAvatarAdmin = Color(0xFF1976D2)  // Azul para admin
 fun HomeAdminScreen(
     usuario: UsuarioModel?,
     usuarioViewModel: UsuarioViewModel,
+    onNavigateToActividades: () -> Unit, // Navegación a la lista de actividades
     onNavigateToMensajes: () -> Unit,
     onNavigateToRoles: () -> Unit,
     onNavigateToUsuarios: () -> Unit,
@@ -69,9 +70,10 @@ fun HomeAdminScreen(
     val usuariosActivos = usuariosState.count { it.estado?.equals("Activo", ignoreCase = true) == true }
     val usuariosInactivos = totalUsuarios - usuariosActivos
 
-    // ⭐ MENÚ PARA ADMINISTRADOR (6 opciones)
+    // ⭐ MENÚ PARA ADMINISTRADOR ACTUALIZADO
     val menuItems = listOf(
         DrawerMenuItem("inicio", "Inicio", Icons.Outlined.Home, Icons.Filled.Home),
+        DrawerMenuItem("actividades", "Gestión Actividades", Icons.Outlined.Assignment, Icons.Filled.Assignment), // NUEVO ITEM
         DrawerMenuItem("mensajes", "Automatización", Icons.Outlined.ScheduleSend, Icons.Filled.ScheduleSend),
         DrawerMenuItem("roles", "Gestionar Roles", Icons.Outlined.Security, Icons.Filled.Security),
         DrawerMenuItem("usuarios", "Gestionar Empleados", Icons.Outlined.People, Icons.Filled.People),
@@ -125,6 +127,7 @@ fun HomeAdminScreen(
                             selectedItem = item.id
                             scope.launch { drawerState.close() }
                             when (item.id) {
+                                "actividades" -> onNavigateToActividades() // Navegación directa
                                 "mensajes" -> onNavigateToMensajes()
                                 "roles" -> onNavigateToRoles()
                                 "usuarios" -> onNavigateToUsuarios()
@@ -293,9 +296,10 @@ fun HomeAdminScreen(
                     // Accesos Rápidos Admin
                     Text(text = "Gestión Rápida", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        // Cambiamos "Empleados" por "Actividades" para darle prioridad, o agregamos una nueva
+                        QuickAccessCard(modifier = Modifier.weight(1f), icon = Icons.Default.Assignment, title = "Actividades", onClick = onNavigateToActividades, color = Color(0xFFFFF3E0))
                         QuickAccessCard(modifier = Modifier.weight(1f), icon = Icons.Default.ScheduleSend, title = "Automatización", onClick = onNavigateToMensajes, color = Color(0xFFE3F2FD))
-                        QuickAccessCard(modifier = Modifier.weight(1f), icon = Icons.Default.Security, title = "Roles", onClick = onNavigateToRoles, color = Color(0xFFE8F5E9))
-                        QuickAccessCard(modifier = Modifier.weight(1f), icon = Icons.Default.People, title = "Empleados", onClick = onNavigateToUsuarios, color = Color(0xFFFFF3E0))
+                        QuickAccessCard(modifier = Modifier.weight(1f), icon = Icons.Default.People, title = "Empleados", onClick = onNavigateToUsuarios, color = Color(0xFFE8F5E9))
                     }
 
                     Spacer(Modifier.weight(1f))

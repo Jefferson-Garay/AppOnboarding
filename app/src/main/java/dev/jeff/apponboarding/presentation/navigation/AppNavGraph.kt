@@ -12,8 +12,8 @@ import dev.jeff.apponboarding.presentation.auth.LoginState
 import dev.jeff.apponboarding.presentation.auth.LoginViewModel
 import dev.jeff.apponboarding.presentation.ayuda.AyudaScreen
 import dev.jeff.apponboarding.presentation.chat.*
-import dev.jeff.apponboarding.presentation.home.HomeEmpleadoScreen  // ⭐ NUEVO
-import dev.jeff.apponboarding.presentation.home.HomeAdminScreen     // ⭐ NUEVO
+import dev.jeff.apponboarding.presentation.home.HomeEmpleadoScreen
+import dev.jeff.apponboarding.presentation.home.HomeAdminScreen
 import dev.jeff.apponboarding.presentation.mensaje.ProgramarMensajesScreen
 import dev.jeff.apponboarding.presentation.recurso.*
 import dev.jeff.apponboarding.presentation.rol.*
@@ -56,7 +56,7 @@ fun AppNavGraph() {
 
     NavHost(navController = navController, startDestination = "login") {
 
-        // ⭐ ACTUALIZADO: Login con navegación basada en rol
+        // ⭐ LOGIN
         composable("login") {
             LoginScreen(
                 viewModel = loginViewModel,
@@ -73,7 +73,7 @@ fun AppNavGraph() {
             )
         }
 
-        // ⭐ NUEVO: Home para EMPLEADO
+        // ⭐ HOME EMPLEADO
         composable("home_empleado") {
             HomeEmpleadoScreen(
                 usuario = currentUser,
@@ -98,11 +98,12 @@ fun AppNavGraph() {
             )
         }
 
-        // ⭐ NUEVO: Home para ADMINISTRADOR
+        // ⭐ HOME ADMINISTRADOR
         composable("home_admin") {
             HomeAdminScreen(
                 usuario = currentUser,
                 usuarioViewModel = usuarioViewModel,
+                onNavigateToActividades = { navController.navigate("actividades") }, // ✅ AGREGADO
                 onNavigateToMensajes = { navController.navigate("mensajes") },
                 onNavigateToRoles = { navController.navigate("roles") },
                 onNavigateToUsuarios = { navController.navigate("usuarios") },
@@ -126,7 +127,6 @@ fun AppNavGraph() {
                 isDarkTheme = isDarkTheme,
                 onToggleDarkTheme = { isDarkTheme = it },
                 onNavigateBack = {
-                    // ⭐ Volver al home correcto según rol
                     if (esAdministrador(currentUser)) {
                         navController.navigate("home_admin") {
                             popUpTo("configuracion") { inclusive = true }
@@ -258,7 +258,7 @@ fun AppNavGraph() {
         composable("actividades/create") {
             CreateActividadScreen(
                 viewModel = actividadViewModel,
-                usuarioRef = currentUser?.id?.toString() ?: "",
+                // usuarioRef = ...  <-- ELIMINADO: Ya no se pasa este argumento
                 onNavigateBack = { navController.popBackStack() }
             )
         }

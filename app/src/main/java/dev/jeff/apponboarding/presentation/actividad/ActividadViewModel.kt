@@ -4,186 +4,139 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.jeff.apponboarding.data.model.ActividadModel
 import dev.jeff.apponboarding.data.model.ActividadRequest
+import dev.jeff.apponboarding.data.model.UsuarioModel
 import dev.jeff.apponboarding.data.repository.ActividadRepository
+import dev.jeff.apponboarding.data.repository.UsuarioRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+sealed class ActividadesState {
+    object Loading : ActividadesState()
+    data class Success(val actividades: List<ActividadModel>) : ActividadesState()
+    data class Error(val message: String) : ActividadesState()
+}
+
 class ActividadViewModel(
-    private val repository: ActividadRepository
+    private val repository: ActividadRepository,
+    private val usuarioRepository: UsuarioRepository = UsuarioRepository()
 ) : ViewModel() {
 
-    private val _actividadesState = MutableStateFlow<ActividadesState>(ActividadesState.Idle)
+    private val _actividadesState = MutableStateFlow<ActividadesState>(ActividadesState.Loading)
     val actividadesState: StateFlow<ActividadesState> = _actividadesState
+
+    private val _mensajeEmergente = MutableStateFlow<ActividadModel?>(null)
+    val mensajeEmergente: StateFlow<ActividadModel?> = _mensajeEmergente.asStateFlow()
+
+    // Estado para la lista de usuarios (para el selector)
+    private val _usuariosState = MutableStateFlow<List<UsuarioModel>>(emptyList())
+    val usuariosState: StateFlow<List<UsuarioModel>> = _usuariosState
+
+    // Notificaciones (pendientes)
+    private val _pendientesCount = MutableStateFlow(0)
+    val pendientesCount: StateFlow<Int> = _pendientesCount
 
     private val _notificacionesState = MutableStateFlow<List<ActividadModel>>(emptyList())
     val notificacionesState: StateFlow<List<ActividadModel>> = _notificacionesState
 
-    private val _pendientesCount = MutableStateFlow(0)
-    val pendientesCount: StateFlow<Int> = _pendientesCount
-
-    private val _createState = MutableStateFlow<CreateActividadState>(CreateActividadState.Idle)
-    val createState: StateFlow<CreateActividadState> = _createState
-
-    private val _deleteState = MutableStateFlow<DeleteActividadState>(DeleteActividadState.Idle)
-    val deleteState: StateFlow<DeleteActividadState> = _deleteState
-
-    private val _updateState = MutableStateFlow<UpdateActividadState>(UpdateActividadState.Idle)
-    val updateState: StateFlow<UpdateActividadState> = _updateState
-
-    private val _mensajeEmergente = MutableStateFlow<ActividadModel?>(null)
-    val mensajeEmergente: StateFlow<ActividadModel?> = _mensajeEmergente
-
-    private fun List<ActividadModel>.filtrarTareasReales(): List<ActividadModel> {
-        return this.filter { !it.tipo.startsWith("MSG_") }
+    // Cargar usuarios para el Dropdown
+    fun loadUsuarios() {
+        viewModelScope.launch {
+            try {
+                val usuarios = usuarioRepository.getUsuarios()
+                _usuariosState.value = usuarios
+            } catch (e: Exception) {
+                // Si falla, lista vacía
+                _usuariosState.value = emptyList()
+            }
+        }
     }
 
     fun loadActividadesByUsuario(usuarioRef: String) {
         viewModelScope.launch {
             _actividadesState.value = ActividadesState.Loading
             try {
-                val actividadesRaw = repository.getActividadesByUsuario(usuarioRef)
+                val actividades = repository.getActividadesByUsuario(usuarioRef)
+                _actividadesState.value = ActividadesState.Success(actividades)
 
-                // 1. Filtramos para obtener solo tareas reales
-                val tareasReales = actividadesRaw.filtrarTareasReales()
-
-                // Lista principal (ordenada)
-                _actividadesState.value = ActividadesState.Success(tareasReales.sortedBy { it.fechaInicio })
-
-                // 2. CORRECCIÓN: Notificaciones solo de tareas reales (para no inflar el contador)
-                val notificacionesReales = tareasReales.sortedByDescending { it.fechaInicio }
-                _notificacionesState.value = notificacionesReales
-
-                // 3. CORRECCIÓN: Contador de pendientes usando solo la lista filtrada
-                val pendientes = tareasReales.count { !it.estado.equals("Completada", ignoreCase = true) }
-                _pendientesCount.value = pendientes
-
-                // 4. Buscar mensajes para POP-UP (Aquí sí buscamos MSG_)
-                val mensajeNuevo = actividadesRaw.firstOrNull {
-                    it.tipo.startsWith("MSG_") &&
-                            !it.estado.equals("VISTO", ignoreCase = true) &&
-                            !it.estado.equals("COMPLETADA", ignoreCase = true)
+                // Filtrar pendientes
+                val pendientes = actividades.filter {
+                    it.estado != "completada" && it.estado != "VISTO"
                 }
-                _mensajeEmergente.value = mensajeNuevo
+                _notificacionesState.value = pendientes
+                _pendientesCount.value = pendientes.size
+
+                // Buscar mensaje emergente (POPUP) no visto
+                val nuevosMensajes = actividades.filter {
+                    it.tipo.startsWith("MSG_") && it.estado == "PENDIENTE"
+                }
+                if (nuevosMensajes.isNotEmpty()) {
+                    _mensajeEmergente.value = nuevosMensajes.first()
+                }
 
             } catch (e: Exception) {
-                _actividadesState.value = ActividadesState.Error("Error al cargar actividades")
+                _actividadesState.value = ActividadesState.Error(e.message ?: "Error desconocido")
             }
         }
     }
 
-    // Método corregido para respuesta instantánea
-    fun marcarMensajeVisto(actividad: ActividadModel) {
-        // 1. UI Optimista: Ocultar inmediatamente el popup
-        _mensajeEmergente.value = null
-
-        // 2. Actualizar en background
+    fun loadAllActividades() {
         viewModelScope.launch {
-            val nuevoEstado = "VISTO"
-            repository.updateEstadoActividad(actividad.id ?: "", "\"$nuevoEstado\"")
-            // No recargamos toda la lista para evitar parpadeos innecesarios,
-            // ya que el popup ya se cerró visualmente.
+            _actividadesState.value = ActividadesState.Loading
+            try {
+                // Aquí usamos el método correcto del repositorio: getActividades()
+                val actividades = repository.getActividades()
+                _actividadesState.value = ActividadesState.Success(actividades)
+            } catch (e: Exception) {
+                _actividadesState.value = ActividadesState.Error(e.message ?: "Error al cargar actividades")
+            }
         }
     }
 
-    fun loadPendientesCount(usuarioRef: String) {
+    fun createActividad(actividad: ActividadRequest, onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
-                val actividadesRaw = repository.getActividadesPendientes(usuarioRef)
-                val actividadesReales = actividadesRaw.filtrarTareasReales() // Filtrar también aquí
-                _pendientesCount.value = actividadesReales.size
-                _notificacionesState.value = actividadesReales.sortedByDescending { it.fechaInicio }
+                val result = repository.createActividad(actividad)
+                if (result != null) {
+                    onSuccess()
+                    // Recargar lista si es necesario
+                    loadAllActividades()
+                }
             } catch (e: Exception) {
-                _pendientesCount.value = 0
-            }
-        }
-    }
-
-    // ... (Resto de métodos create, update, delete igual que antes) ...
-
-    fun createActividad(actividad: ActividadRequest) {
-        viewModelScope.launch {
-            _createState.value = CreateActividadState.Loading
-            val result = repository.createActividad(actividad)
-            if (result != null) {
-                _createState.value = CreateActividadState.Success(result)
-            } else {
-                _createState.value = CreateActividadState.Error("Error al crear")
+                _actividadesState.value = ActividadesState.Error(e.message ?: "Error al crear actividad")
             }
         }
     }
 
     fun cambiarEstadoActividad(actividadId: String, actividad: ActividadModel, nuevoEstado: String, usuarioRef: String) {
         viewModelScope.launch {
-            val success = repository.updateEstadoActividad(actividadId, "\"$nuevoEstado\"")
-            if (success) {
-                loadActividadesByUsuario(usuarioRef)
-            } else {
-                val request = ActividadRequest(
-                    titulo = actividad.titulo,
-                    descripcion = actividad.descripcion,
-                    tipo = actividad.tipo,
-                    fechaInicio = actividad.fechaInicio,
-                    fechaFin = actividad.fechaFin,
-                    usuarioRef = actividad.usuarioRef,
-                    estado = nuevoEstado
-                )
-                if (repository.updateActividad(actividadId, request) != null) {
+            try {
+                val success = repository.updateEstadoActividad(actividadId, nuevoEstado)
+                if (success) {
+                    // Si es un mensaje emergente, cerrarlo
+                    if (_mensajeEmergente.value?.id == actividadId) {
+                        _mensajeEmergente.value = null
+                    }
                     loadActividadesByUsuario(usuarioRef)
                 }
+            } catch (e: Exception) {
+                // Manejo de error silencioso
             }
         }
     }
 
-    fun updateActividad(id: String, actividad: ActividadRequest) {
+    fun marcarMensajeVisto(actividad: ActividadModel) {
         viewModelScope.launch {
-            _updateState.value = UpdateActividadState.Loading
-            if (repository.updateActividad(id, actividad) != null) {
-                _updateState.value = UpdateActividadState.Success(repository.getActividadById(id)!!)
-            } else {
-                _updateState.value = UpdateActividadState.Error("Fallo update")
+            try {
+                val usuarioRef = actividad.usuarioRef ?: return@launch
+                repository.updateEstadoActividad(actividad.id ?: "", "VISTO")
+                _mensajeEmergente.value = null
+                // Actualizar lista para que baje el contador
+                loadActividadesByUsuario(usuarioRef)
+            } catch (e: Exception) {
+                _mensajeEmergente.value = null
             }
         }
     }
-
-    fun deleteActividad(id: String) {
-        viewModelScope.launch {
-            _deleteState.value = DeleteActividadState.Loading
-            if (repository.deleteActividad(id)) {
-                _deleteState.value = DeleteActividadState.Success
-            } else {
-                _deleteState.value = DeleteActividadState.Error("Error al eliminar")
-            }
-        }
-    }
-
-    fun resetCreateState() { _createState.value = CreateActividadState.Idle }
-    fun resetDeleteState() { _deleteState.value = DeleteActividadState.Idle }
-    fun resetUpdateState() { _updateState.value = UpdateActividadState.Idle }
-}
-
-// Sealed classes (iguales)
-sealed class ActividadesState {
-    object Idle : ActividadesState()
-    object Loading : ActividadesState()
-    data class Success(val actividades: List<ActividadModel>) : ActividadesState()
-    data class Error(val message: String) : ActividadesState()
-}
-sealed class CreateActividadState {
-    object Idle : CreateActividadState()
-    object Loading : CreateActividadState()
-    data class Success(val actividad: ActividadModel) : CreateActividadState()
-    data class Error(val message: String) : CreateActividadState()
-}
-sealed class DeleteActividadState {
-    object Idle : DeleteActividadState()
-    object Loading : DeleteActividadState()
-    object Success : DeleteActividadState()
-    data class Error(val message: String) : DeleteActividadState()
-}
-sealed class UpdateActividadState {
-    object Idle : UpdateActividadState()
-    object Loading : UpdateActividadState()
-    data class Success(val actividad: ActividadModel) : UpdateActividadState()
-    data class Error(val message: String) : UpdateActividadState()
 }
